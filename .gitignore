@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## Java
 
 *.class
@@ -61,3 +62,17 @@ build/
 
 ## OS Specific
 .DS_Store
+=======
+*.class
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+>>>>>>> 6eaf1b5844b5e55ed7d5272b1d7a6d61a092668b
