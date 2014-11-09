@@ -64,7 +64,7 @@ public class Blocks {
 	
 	public void overLappCheck(Rectangle block, Rectangle playerRectangle) {
 		if(block.overlaps(playerRectangle)) {	
-			if(block.y + 105 >= playerRectangle.y && block.y + 95 <= playerRectangle.y) { //Add block.getYMax() so you can have multiple sized blocks
+			if(isOnBlock(block, playerRectangle)) { //Add block.getYMax() so you can have multiple sized blocks
 				fall = false;
 				player.setY((int) (block.y + 103));
 				if(player.getJump() > 15) {
@@ -72,23 +72,41 @@ public class Blocks {
 					player.setJumping(false);
 				}
 				player.setWaitTime(player.getWaitTime() == 0 ? 5 : player.getWaitTime());
-			} else if(playerRectangle.y + 64 >= block.y) {
-				if(fall == false) {
-					player.setDead(true);
-				} else {
-					//player.setY((int) (block.y - 65));
-					player.setJump(20);
-				}
 			} else {
-				if(block.x - playerRectangle.x < 0) {
+				if(isUnderBlock(block, playerRectangle)) {
+					if(fall == false) {
+						player.setDead(true);
+					} else {
+						//player.setY((int) (block.y - 65));
+						player.setJump(20);
+					}
+				}
+				
+				if(overLapsRightSide(block, playerRectangle)) {
 					player.setMaxSpeedLeft((int) 0);
 					player.setX((int) (block.x + 103));
-				} else {				
+				} else if(overLapsLeftSide(block, playerRectangle)){				
 					player.setMaxSpeedRight((int) 0);
 					player.setX((int) (block.x - 65));
-				}
-			}
+				}	
+			}		
 		}
+	}
+	
+	public static boolean isUnderBlock(Rectangle block, Rectangle playerRectangle) {
+		return playerRectangle.y + 64 >= block.y && playerRectangle.y + 64 <= block.y + 20;
+	}
+	
+	public static boolean isOnBlock(Rectangle block, Rectangle playerRectangle) {
+		return block.y + 108 >= playerRectangle.y && block.y + 88 <= playerRectangle.y;
+	}
+	
+	public static boolean overLapsRightSide(Rectangle block, Rectangle playerRectangle) {
+		return block.x + 102 >= playerRectangle.x && block.x + 82 <= playerRectangle.x;
+	}
+	
+	public static boolean overLapsLeftSide(Rectangle block, Rectangle playerRectangle) {
+		return block.x <= playerRectangle.x + 64 && block.x + 20 >= playerRectangle.x + 64 ;
 	}
 
 	public void spawnBlock() {
