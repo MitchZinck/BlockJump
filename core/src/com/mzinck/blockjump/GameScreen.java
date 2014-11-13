@@ -53,6 +53,12 @@ public class GameScreen implements Screen {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
  
 		// tell the camera to update its matrices.
+		if(player.getY() > camera.position.y + (camera.viewportHeight * .25f)) {
+			camera.position.y += 20;
+		} else if(player.getY() < (camera.position.y - (camera.viewportHeight * .5f)) + 20) {
+			camera.position.y -= 20;
+		}
+		
 		camera.update();
  
 		// tell the SpriteBatch to render in the
@@ -63,17 +69,21 @@ public class GameScreen implements Screen {
 		// all drops
 		game.batch.begin();
 		for(Rectangle blz: blocks.getBlocksMoving()) {
-	         game.batch.draw(blockImage, blz.x, blz.y);
+	        game.batch.draw(blockImage, blz.x, blz.y, blz.getWidth(), blz.getHeight());
 	    }
 		for(Rectangle blz : blocks.getBlocksStationary()) {
-			game.batch.draw(blockImage, blz.x, blz.y);
+	        game.batch.draw(blockImage, blz.x, blz.y, blz.getWidth(), blz.getHeight());
 		}
 		game.batch.draw(bucketImage, player.getX(), player.getY());
 		if(64 + player.getX() > 480) {
+			player.setCheckBoth(true);
 			game.batch.draw(bucketImage, player.getX() - 480, player.getY());
 		} else if(player.getX() < 0) {
+			player.setCheckBoth(true);
 			game.batch.draw(bucketImage, player.getX() + 480, player.getY());
-		}		
+		} else {
+			player.setCheckBoth(false);
+		}
 		if (debug == true) {
 			game.font.draw(game.batch,Integer.toString(Gdx.graphics.getFramesPerSecond())
 										+ " FPS : " + Float.toString(Math.round(Gdx.input.getAccelerometerX() * 100) / 100)
@@ -87,7 +97,7 @@ public class GameScreen implements Screen {
 		}
 		
 		player.update();
-		blocks.update();
+		blocks.update(false);
 		
 		if(player.getWaitTime() > 0) {
 			player.setWaitTime(player.getWaitTime() - 1);

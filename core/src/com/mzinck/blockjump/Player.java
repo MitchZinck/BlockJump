@@ -9,9 +9,9 @@ public class Player {
 	
 	private int x = 480 / 2 - 64 / 2;
 	private int y = 20;
-	private int jump = 0, jumpSpeed = 20, width = 64, height = 64, waitTime = 0;
+	private int jump = 0, jumpSpeed = 20, fallSpeed = 20, width = 64, height = 64, waitTime = 0;
 	private int maxSpeedRight = 20, maxSpeedLeft = 20;
-	private boolean jumping = false, falling = true;
+	private boolean jumping = false, falling = true, checkBoth = false;
 	private Sound jumpSound;
 	private Blocks blocks;
 	private boolean dead = false;
@@ -34,9 +34,10 @@ public class Player {
 					x += Math.floor(10 * acceleration);
 				}
 			}
-			if(x + width > 480) {
+			
+			if(x + width > 480 && acceleration > 0) {
 				x = x - 480;
-			} else if(x < 0) {
+			} else if(x < 0 && acceleration < 0) {
 				x = x + 480;
 			}
 		}
@@ -50,7 +51,7 @@ public class Player {
 			if(jump < 15) {
 				y += jumpSpeed;
 			} else {
-				y -= jumpSpeed;
+				y -= fallSpeed;
 			}
 			jump++;
 			if(y <= 20) {
@@ -61,6 +62,8 @@ public class Player {
 		} else if(y > 20 && falling == true) {
 			y = y - jumpSpeed > 20 ? y - jumpSpeed : 20;
 		}
+		
+		fallSpeed = 20;
 	}
 	
 	public void setDead(boolean dead) {
@@ -80,6 +83,14 @@ public class Player {
 		return x;
 	}
 	
+	public int getWidth() {
+		return width;
+	}
+
+	public void setWidth(int width) {
+		this.width = width;
+	}
+	
 	public boolean isDead() {
 		return dead;
 	}
@@ -91,6 +102,15 @@ public class Player {
 	public void setX(int x) {
 		this.x = x;
 	}
+	
+	public boolean checkBoth() {
+		return checkBoth;
+	}
+
+	public void setCheckBoth(boolean checkBoth) {
+		this.checkBoth = checkBoth;
+	}
+
 
 	public int getY() {
 		return y;
@@ -101,6 +121,14 @@ public class Player {
 	}
 	public int getJump() {
 		return jump;
+	}
+	
+	public int getFallSpeed() {
+		return fallSpeed;
+	}
+
+	public void setFallSpeed(int fallSpeed) {
+		this.fallSpeed = fallSpeed;
 	}
 
 	public void setJump(int jump) {

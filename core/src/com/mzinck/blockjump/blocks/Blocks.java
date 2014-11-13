@@ -1,7 +1,7 @@
 package com.mzinck.blockjump.blocks;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
@@ -14,25 +14,43 @@ public class Blocks {
 	private ArrayList<Rectangle> blocksMoving = new ArrayList<Rectangle>();
 	private ArrayList<Rectangle> blocksStationary = new ArrayList<Rectangle>();
 	private long lastDropTime;
-	private Player player;
+	private static Player player;
 	private boolean fall;
+	private SecureRandom random = new SecureRandom();
 
 	public Blocks(Player player) {
 		this.setPlayer(player);
 	}
-
-	public void update() {
-		fall = true;
-		player.setMaxSpeedLeft(20);
-		player.setMaxSpeedRight(20);
+	
+	/**
+	 * Collision and block updating method. TO-DO: Clean and seperate collision and block updating.	
+	 * @param twice
+	 * 		Determines whether the thread is updating for a second time. Updates a second time if the player is halfway across the screen.
+	 */
+	public void update(boolean twice) {
+		Rectangle plr = player.getPlayerRectangle();
+		
+		if(twice == false) {
+			fall = true;
+			player.setMaxSpeedLeft(20);
+			player.setMaxSpeedRight(20);
+		} else { 		
+			int x = 0;			
+			if(player.getX() + player.getWidth() > 480) {
+				x = player.getX() - 480;
+			} else if(player.getX() < 0) {
+				x = player.getX() + 480;
+			}
+			plr.x = x;
+		}
 				
 		for(Rectangle rect : blocksStationary) {
-			overLappCheck(rect, player.getPlayerRectangle());
+			overLappCheck(rect, plr, false);
 		}
 		
 		for(int z = 0; z < blocksMoving.size(); z++) {
 			Rectangle bl = blocksMoving.get(z);
-			Rectangle pl = player.getPlayerRectangle();
+			Rectangle pl = plr;
 			
 			for(int i = 0; i < blocksMoving.size(); i++) {
 				Rectangle zv = blocksMoving.get(i);
@@ -50,23 +68,31 @@ public class Blocks {
 				}
 			}
 			
-			if(bl.y - 5 > 20) {
-				//bl.y -= 200 * Gdx.graphics.getDeltaTime();
-				bl.y -= 5;
-			} else {
-				bl.y = 20;
+			if(twice == false) {
+				if(bl.y - 5 > 20) {
+					//bl.y -= 200 * Gdx.graphics.getDeltaTime();
+					bl.y -= 5;
+				} else {
+					bl.y = 20;
+				}
 			}
 			
-			overLappCheck(bl, pl);
+			overLappCheck(bl, pl, true);
 		}
+		
 		player.setFalling(fall);
+		if(twice == false) {			
+			if(player.checkBoth()) {
+				update(true);
+			}
+		}
 	}
 	
-	public void overLappCheck(Rectangle block, Rectangle playerRectangle) {
+	public void overLappCheck(Rectangle block, Rectangle playerRectangle, boolean blockIsFalling) {
 		if(block.overlaps(playerRectangle)) {	
-			if(isOnBlock(block, playerRectangle)) { //Add block.getYMax() so you can have multiple sized blocks
+			if(isOnBlock(block, playerRectangle)) {
 				fall = false;
-				player.setY((int) (block.y + 103));
+				player.setY((int) (block.y + block.width + 1));
 				if(player.getJump() > 15) {
 					player.setJump(0);
 					player.setJumping(false);
@@ -74,49 +100,58 @@ public class Blocks {
 				player.setWaitTime(player.getWaitTime() == 0 ? 5 : player.getWaitTime());
 			} else {
 				if(isUnderBlock(block, playerRectangle)) {
-					if(fall == false) {
+					if(fall == false && blockIsFalling == false) {
 						player.setDead(true);
 					} else {
-						//player.setY((int) (block.y - 65));
 						player.setJump(20);
 					}
 				}
 				
 				if(overLapsRightSide(block, playerRectangle)) {
 					player.setMaxSpeedLeft((int) 0);
-					player.setX((int) (block.x + 103));
+					player.setX((int) (block.x + block.width - 1));
+//					if(-Gdx.input.getAccelerometerX() < -0.1F) {
+//						player.setFallSpeed(3); //avalanche side jumping
+//						player.setJump(0);
+//						player.setJumping(false);
+//					}
 				} else if(overLapsLeftSide(block, playerRectangle)){				
 					player.setMaxSpeedRight((int) 0);
-					player.setX((int) (block.x - 65));
+					player.setX((int) (block.x - player.getWidth() + 1));
+//					if(-Gdx.input.getAccelerometerX() > 0.1F) {
+//						player.setFallSpeed(3);
+//						player.setJump(0);
+//						player.setJumping(false);
+//					}
 				}	
 			}		
 		}
 	}
 	
 	public static boolean isUnderBlock(Rectangle block, Rectangle playerRectangle) {
-		return playerRectangle.y + 64 >= block.y && playerRectangle.y + 64 <= block.y + 20;
+		return playerRectangle.y + player.getWidth() >= block.y && playerRectangle.y + player.getWidth() <= block.y + 20;
 	}
 	
 	public static boolean isOnBlock(Rectangle block, Rectangle playerRectangle) {
-		return block.y + 108 >= playerRectangle.y && block.y + 88 <= playerRectangle.y;
+		return block.y + block.height >= playerRectangle.y && block.y + (block.height - 20) <= playerRectangle.y;
 	}
 	
 	public static boolean overLapsRightSide(Rectangle block, Rectangle playerRectangle) {
-		return block.x + 102 >= playerRectangle.x && block.x + 82 <= playerRectangle.x;
+		return block.x + block.width >= playerRectangle.x && block.x + (block.width - player.getMaxSpeedLeft()) <= playerRectangle.x;
 	}
 	
 	public static boolean overLapsLeftSide(Rectangle block, Rectangle playerRectangle) {
-		return block.x <= playerRectangle.x + 64 && block.x + 20 >= playerRectangle.x + 64 ;
+		return block.x <= playerRectangle.x + player.getWidth() && block.x + player.getMaxSpeedRight() >= playerRectangle.x + player.getWidth() ;
 	}
 
 	public void spawnBlock() {
 		Rectangle block = new Rectangle();
-		int rand = MathUtils.random(0, 480 - 100) - MathUtils.random(200);
-		rand = rand > 0 ? rand : -rand;  // Trying to get it truly random, though I think just leaving it before doing this would be just as random idk...
+		int rand = random.nextInt(380) + 50;
 		block.x = rand;
-		block.y = 1000;
-		block.width = 102;
-		block.height = 108;
+		block.y = player.getY() + 1000;
+		rand = random.nextInt(100);
+		block.width = rand > 50 ? 102 : 153;
+		block.height = rand > 50 ? 108 : 162;
 		blocksMoving.add(block);
 		lastDropTime = TimeUtils.millis();
 	}
