@@ -16,6 +16,7 @@ public class Blocks {
 	private long lastDropTime;
 	private static Player player;
 	private boolean fall;
+	private int highestBlock = 1000;
 	private SecureRandom random = new SecureRandom();
 
 	public Blocks(Player player) {
@@ -29,6 +30,7 @@ public class Blocks {
 	 */
 	public void update(boolean twice) {
 		Rectangle plr = player.getPlayerRectangle();
+		Rectangle bl;
 		
 		if(twice == false) {
 			fall = true;
@@ -49,8 +51,7 @@ public class Blocks {
 		}
 		
 		for(int z = 0; z < blocksMoving.size(); z++) {
-			Rectangle bl = blocksMoving.get(z);
-			Rectangle pl = plr;
+			bl = blocksMoving.get(z);
 			
 			for(int i = 0; i < blocksMoving.size(); i++) {
 				Rectangle zv = blocksMoving.get(i);
@@ -66,6 +67,7 @@ public class Blocks {
 					blocksMoving.remove(bl);
 					blocksStationary.add(bl);
 				}
+				highestBlock = (int) bl.y;
 			}
 			
 			if(twice == false) {
@@ -77,7 +79,7 @@ public class Blocks {
 				}
 			}
 			
-			overLappCheck(bl, pl, true);
+			overLappCheck(bl, plr, true);
 		}
 		
 		player.setFalling(fall);
@@ -92,8 +94,8 @@ public class Blocks {
 		if(block.overlaps(playerRectangle)) {	
 			if(isOnBlock(block, playerRectangle)) {
 				fall = false;
-				player.setY((int) (block.y + block.width + 1));
-				if(player.getJump() > 15) {
+				player.setY((int) (block.y + block.height - 1));
+				if(player.getJump() > 18) {
 					player.setJump(0);
 					player.setJumping(false);
 				}
@@ -146,9 +148,9 @@ public class Blocks {
 
 	public void spawnBlock() {
 		Rectangle block = new Rectangle();
-		int rand = random.nextInt(380) + 50;
+		int rand = random.nextInt(320);
 		block.x = rand;
-		block.y = player.getY() + 1000;
+		block.y = highestBlock + 1000;
 		rand = random.nextInt(100);
 		block.width = rand > 50 ? 102 : 153;
 		block.height = rand > 50 ? 108 : 162;

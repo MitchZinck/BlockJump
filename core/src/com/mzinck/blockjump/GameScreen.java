@@ -6,6 +6,7 @@ import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.mzinck.blockjump.blocks.Blocks;
@@ -59,14 +60,13 @@ public class GameScreen implements Screen {
 			camera.position.y -= 20;
 		}
 		
-		camera.update();
+		camera.update();		
+		player.update();
  
 		// tell the SpriteBatch to render in the
 		// coordinate system specified by the camera.
 		game.batch.setProjectionMatrix(camera.combined);
- 
-		// begin a new batch and draw the bucket and
-		// all drops
+		
 		game.batch.begin();
 		for(Rectangle blz: blocks.getBlocksMoving()) {
 	        game.batch.draw(blockImage, blz.x, blz.y, blz.getWidth(), blz.getHeight());
@@ -92,11 +92,10 @@ public class GameScreen implements Screen {
 		}
 		game.batch.end();
 		
-		if(TimeUtils.millis() - blocks.getLastDropTime() > 2500) {
+		if(TimeUtils.millis() - blocks.getLastDropTime() > MathUtils.random(1000, 3500)) {
 			blocks.spawnBlock();
 		}
 		
-		player.update();
 		blocks.update(false);
 		
 		if(player.getWaitTime() > 0) {

@@ -22,7 +22,7 @@ public class Player {
 	
 	public void update() {
 		float acceleration = -Gdx.input.getAccelerometerX();
-		if(acceleration >= 0.1F || acceleration <= -0.1F) {
+		if(acceleration >= 0.3F || acceleration <= -0.3F) {
 			if(10 * acceleration > maxSpeedRight) {
 				x += maxSpeedRight;
 			} else if(10 * acceleration < -maxSpeedLeft) {
@@ -48,7 +48,7 @@ public class Player {
 		}
 
 		if(jumping == true) {
-			if(jump < 15) {
+			if(jump < 18) {
 				y += jumpSpeed;
 			} else {
 				y -= fallSpeed;
