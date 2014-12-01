@@ -7,10 +7,10 @@ import com.mzinck.blockjump.blocks.Blocks;
 
 public class Player {
 	
-	private int x = 480 / 2 - 64 / 2;
-	private int y = 20;
+	private int x = Constants.SCREEN_WIDTH / 2 - 64 / 2;
+	private int y = Constants.BASE_HEIGHT;
 	private int jump = 0, jumpSpeed = 20, fallSpeed = 20, width = 64, height = 64, waitTime = 0;
-	private int maxSpeedRight = 20, maxSpeedLeft = 20;
+	private int maxSpeedRight = 20, maxSpeedLeft = 20, currentScore = 0, highScore;
 	private boolean jumping = false, falling = true, checkBoth = false;
 	private Sound jumpSound;
 	private Blocks blocks;
@@ -21,6 +21,7 @@ public class Player {
 	}
 	
 	public void update() {
+		currentScore = (y - 20) / 10;
 		float acceleration = -Gdx.input.getAccelerometerX();
 		if(acceleration >= 0.3F || acceleration <= -0.3F) {
 			if(10 * acceleration > maxSpeedRight) {
@@ -35,10 +36,10 @@ public class Player {
 				}
 			}
 			
-			if(x + width > 480 && acceleration > 0) {
-				x = x - 480;
+			if(x + width > Constants.SCREEN_WIDTH && acceleration > 0) {
+				x = x - Constants.SCREEN_WIDTH;
 			} else if(x < 0 && acceleration < 0) {
-				x = x + 480;
+				x = x + Constants.SCREEN_WIDTH;
 			}
 		}
 
@@ -54,16 +55,28 @@ public class Player {
 				y -= fallSpeed;
 			}
 			jump++;
-			if(y <= 20) {
-				y = 20;
+			if(y <= Constants.BASE_HEIGHT) {
+				y = Constants.BASE_HEIGHT;
 				jump = 0;
 				jumping = false;
 			}
-		} else if(y > 20 && falling == true) {
-			y = y - jumpSpeed > 20 ? y - jumpSpeed : 20;
+		} else if(y > 40 && falling == true) {
+			y = y - jumpSpeed > Constants.BASE_HEIGHT ? y - jumpSpeed : Constants.BASE_HEIGHT;
 		}
 		
 		fallSpeed = 20;
+	}
+	
+	public String getCurrentScore() {
+		return Integer.toString(currentScore);
+	}
+
+	public String getHighScore() {
+		return Integer.toString(highScore);
+	}
+	
+	public void setHighScore(int highScore) {
+		this.highScore = highScore;
 	}
 	
 	public void setDead(boolean dead) {

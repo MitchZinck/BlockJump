@@ -18,7 +18,7 @@ public class SplashScreen implements Screen {
 		this.game = game;		
 		logo = new Texture(Gdx.files.internal("logo.png"));		
 		camera = new OrthographicCamera();
-		camera.setToOrtho(false, 800, 480); 
+		camera.setToOrtho(false, Constants.SCREEN_HEIGHT, Constants.SCREEN_WIDTH); 
 	}
  
 	@Override
@@ -30,7 +30,7 @@ public class SplashScreen implements Screen {
 		game.batch.setProjectionMatrix(camera.combined);
  
 		game.batch.begin();
-		game.batch.draw(logo, 400 - logo.getWidth() / 2, 240 - logo.getHeight() / 2);
+		game.batch.draw(logo, (Constants.SCREEN_HEIGHT / 2) - logo.getWidth() / 2, (Constants.SCREEN_WIDTH / 2) - logo.getHeight() / 2);
 		game.batch.end();
  
 		if (Gdx.input.isTouched()) {

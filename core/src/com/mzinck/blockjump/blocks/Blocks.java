@@ -7,6 +7,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.mzinck.blockjump.Constants;
 import com.mzinck.blockjump.Player;
 
 public class Blocks {
@@ -16,8 +17,7 @@ public class Blocks {
 	private long lastDropTime;
 	private static Player player;
 	private boolean fall;
-	private int highestBlock = 1000;
-	private SecureRandom random = new SecureRandom();
+	private Rectangle lastSpawn;
 
 	public Blocks(Player player) {
 		this.setPlayer(player);
@@ -38,10 +38,10 @@ public class Blocks {
 			player.setMaxSpeedRight(20);
 		} else { 		
 			int x = 0;			
-			if(player.getX() + player.getWidth() > 480) {
-				x = player.getX() - 480;
+			if(player.getX() + player.getWidth() > Constants.SCREEN_WIDTH) {
+				x = player.getX() - Constants.SCREEN_WIDTH;
 			} else if(player.getX() < 0) {
-				x = player.getX() + 480;
+				x = player.getX() + Constants.SCREEN_WIDTH;
 			}
 			plr.x = x;
 		}
@@ -67,15 +67,14 @@ public class Blocks {
 					blocksMoving.remove(bl);
 					blocksStationary.add(bl);
 				}
-				highestBlock = (int) bl.y;
 			}
 			
 			if(twice == false) {
-				if(bl.y - 5 > 20) {
+				if(bl.y - 5 > Constants.BASE_HEIGHT) {
 					//bl.y -= 200 * Gdx.graphics.getDeltaTime();
 					bl.y -= 5;
 				} else {
-					bl.y = 20;
+					bl.y = Constants.BASE_HEIGHT;
 				}
 			}
 			
@@ -148,14 +147,24 @@ public class Blocks {
 
 	public void spawnBlock() {
 		Rectangle block = new Rectangle();
-		int rand = random.nextInt(320);
-		block.x = rand;
-		block.y = highestBlock + 1000;
-		rand = random.nextInt(100);
+		int rand = MathUtils.random(Constants.SCREEN_WIDTH - 153);
+		block.x = rand;		
+		block.y = player.getY() + 1000;
+		rand =  MathUtils.random(100);
 		block.width = rand > 50 ? 102 : 153;
 		block.height = rand > 50 ? 108 : 162;
+		
+		if(lastSpawn != null && block.overlaps(lastSpawn)) {
+			if(lastSpawn.x < 360) {
+				block.x = MathUtils.random(lastSpawn.x + 153, Constants.SCREEN_WIDTH);
+			} else {
+				block.x = MathUtils.random(0, lastSpawn.x - 1);
+			}
+		}
+		
 		blocksMoving.add(block);
 		lastDropTime = TimeUtils.millis();
+		lastSpawn = block;
 	}
 
 	public long getLastDropTime() {

@@ -6,27 +6,34 @@ import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.mzinck.blockjump.blocks.Blocks;
+import com.mzinck.blockjump.lava.Lava;
  
 public class GameScreen implements Screen {
 	
 	private final BlockJump game;
+	private Lava lava;
 	private Blocks blocks;
 	private Texture blockImage;
 	private Texture bucketImage;
 	private Music rainMusic;
 	private OrthographicCamera camera;
+	private int textHeight = Constants.SCREEN_HEIGHT;
 	private Player player;
 	private boolean debug = true;
+	private ShapeRenderer shapeRenderer = new ShapeRenderer();
  
 	public GameScreen(final BlockJump game) {
 		this.game = game;
 		
 		player = new Player();
 		blocks = new Blocks(player);
+		lava = new Lava();
 		player.setBlocks(blocks);
  
 		// load the images for the droplet and the bucket, 64x64 pixels each
@@ -39,7 +46,7 @@ public class GameScreen implements Screen {
  
 		// create the camera and the SpriteBatch
 		camera = new OrthographicCamera();
-		camera.setToOrtho(false, 480, 800); 
+		camera.setToOrtho(false, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT); 
 
 	    blocks.spawnBlock();
 	}
@@ -54,10 +61,12 @@ public class GameScreen implements Screen {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
  
 		// tell the camera to update its matrices.
-		if(player.getY() > camera.position.y + (camera.viewportHeight * .25f)) {
+		if(player.getY() > camera.position.y + (camera.viewportHeight * .10f)) {
 			camera.position.y += 20;
-		} else if(player.getY() < (camera.position.y - (camera.viewportHeight * .5f)) + 20) {
+			textHeight += 20;
+		} else if(player.getY() < (camera.position.y - (camera.viewportHeight * .5f)) + Constants.BASE_HEIGHT) {
 			camera.position.y -= 20;
+			textHeight -= 20;
 		}
 		
 		camera.update();		
@@ -74,13 +83,14 @@ public class GameScreen implements Screen {
 		for(Rectangle blz : blocks.getBlocksStationary()) {
 	        game.batch.draw(blockImage, blz.x, blz.y, blz.getWidth(), blz.getHeight());
 		}
+		
 		game.batch.draw(bucketImage, player.getX(), player.getY());
-		if(64 + player.getX() > 480) {
+		if(64 + player.getX() > Constants.SCREEN_WIDTH) {
 			player.setCheckBoth(true);
-			game.batch.draw(bucketImage, player.getX() - 480, player.getY());
+			game.batch.draw(bucketImage, player.getX() - Constants.SCREEN_WIDTH, player.getY());
 		} else if(player.getX() < 0) {
 			player.setCheckBoth(true);
-			game.batch.draw(bucketImage, player.getX() + 480, player.getY());
+			game.batch.draw(bucketImage, player.getX() + Constants.SCREEN_WIDTH, player.getY());
 		} else {
 			player.setCheckBoth(false);
 		}
@@ -88,15 +98,28 @@ public class GameScreen implements Screen {
 			game.font.draw(game.batch,Integer.toString(Gdx.graphics.getFramesPerSecond())
 										+ " FPS : " + Float.toString(Math.round(Gdx.input.getAccelerometerX() * 100) / 100)
 										+ "X Tilt\n X: " + player.getX() + "\n Y: "
-										+ player.getY() + " Blah: ", 0, 800);
+										+ player.getY() + " Highscore: " + player.getCurrentScore() + "/" + player.getHighScore(), 0, textHeight);
+		} else {
+			
 		}
+		
 		game.batch.end();
 		
-		if(TimeUtils.millis() - blocks.getLastDropTime() > MathUtils.random(1000, 3500)) {
+		shapeRenderer.setProjectionMatrix(camera.combined);
+		
+	    shapeRenderer.begin(ShapeType.Filled);
+	    shapeRenderer.setColor(0, 1, 0, 1);
+	    shapeRenderer.rect(0, lava.getHeight() - 450, Constants.SCREEN_WIDTH, 450);
+	    
+	    shapeRenderer.end();
+	 	
+		if(TimeUtils.millis() - blocks.getLastDropTime() > 1000) {
 			blocks.spawnBlock();
 		}
 		
 		blocks.update(false);
+		lava.update(player);
+		
 		
 		if(player.getWaitTime() > 0) {
 			player.setWaitTime(player.getWaitTime() - 1);
