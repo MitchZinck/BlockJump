@@ -2,8 +2,9 @@ package com.mzinck.blockjump;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Rectangle;
-import com.mzinck.blockjump.blocks.Blocks;
+import com.mzinck.blockjump.blocks.BlockLogic;
 
 public class Player {
 	
@@ -13,8 +14,11 @@ public class Player {
 	private int maxSpeedRight = 20, maxSpeedLeft = 20, currentScore = 0, highScore;
 	private boolean jumping = false, falling = true, checkBoth = false;
 	private Sound jumpSound;
-	private Blocks blocks;
+	private Texture jumpTexture = new Texture(Gdx.files.internal("playerjump.png"));
+	private Texture neutralTexture = new Texture(Gdx.files.internal("player.png"));
+	private Texture currentTexture = neutralTexture;
 	private boolean dead = false;
+	private BlockLogic blocks;
 
 	public Player() {
 		jumpSound = Gdx.audio.newSound(Gdx.files.internal("jump.wav"));
@@ -49,6 +53,7 @@ public class Player {
 		}
 
 		if(jumping == true) {
+			currentTexture = jumpTexture;
 			if(jump < 18) {
 				y += jumpSpeed;
 			} else {
@@ -60,8 +65,11 @@ public class Player {
 				jump = 0;
 				jumping = false;
 			}
-		} else if(y > 40 && falling == true) {
+		} else if(falling == true) {
 			y = y - jumpSpeed > Constants.BASE_HEIGHT ? y - jumpSpeed : Constants.BASE_HEIGHT;
+			currentTexture = jumpTexture;
+		} else {
+			currentTexture = neutralTexture;
 		}
 		
 		fallSpeed = 20;
@@ -75,6 +83,14 @@ public class Player {
 		return Integer.toString(highScore);
 	}
 	
+	public Texture getCurrentTexture() {
+		return currentTexture;
+	}
+
+	public void setCurrentTexture(Texture currentTexture) {
+		this.currentTexture = currentTexture;
+	}
+
 	public void setHighScore(int highScore) {
 		this.highScore = highScore;
 	}
@@ -108,7 +124,7 @@ public class Player {
 		return dead;
 	}
 	
-	public void setBlocks(Blocks blocks) {
+	public void setBlocks(BlockLogic blocks) {
 		this.blocks = blocks;
 	}	
 

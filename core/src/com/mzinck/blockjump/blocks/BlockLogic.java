@@ -4,33 +4,37 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.TimeUtils;
 import com.mzinck.blockjump.Constants;
+import com.mzinck.blockjump.GameScreen;
 import com.mzinck.blockjump.Player;
 
-public class Blocks {
+public class BlockLogic {
 
-	private ArrayList<Rectangle> blocksMoving = new ArrayList<Rectangle>();
-	private ArrayList<Rectangle> blocksStationary = new ArrayList<Rectangle>();
+	private ArrayList<Block> blocksMoving = new ArrayList<Block>(); // Redo this so that it updates in the Block.java for eachblock
+	private ArrayList<Block> blocksStationary = new ArrayList<Block>();
 	private long lastDropTime;
 	private static Player player;
 	private boolean fall;
 	private Rectangle lastSpawn;
+	public static int blah = 0;
 
-	public Blocks(Player player) {
+	public BlockLogic(Player player) {
 		this.setPlayer(player);
 	}
 	
 	/**
-	 * Collision and block updating method. TO-DO: Clean and seperate collision and block updating.	
+	 * Collision and block updating method. TO-DO: Clean and seperate collision and block updating.	Make Blocks update in the Block.java class
 	 * @param twice
 	 * 		Determines whether the thread is updating for a second time. Updates a second time if the player is halfway across the screen.
 	 */
 	public void update(boolean twice) {
+		GameScreen.cameraFallSpeed = 20;
 		Rectangle plr = player.getPlayerRectangle();
-		Rectangle bl;
+		Block bl;
 		
 		if(twice == false) {
 			fall = true;
@@ -46,39 +50,44 @@ public class Blocks {
 			plr.x = x;
 		}
 				
-		for(Rectangle rect : blocksStationary) {
-			overLappCheck(rect, plr, false);
+		for(Block block : blocksStationary) {
+			block.setBlockCurrent(block.getBlockSleep());
+			overLappCheck(block, plr, false);
 		}
 		
 		for(int z = 0; z < blocksMoving.size(); z++) {
+			boolean moving = true;
 			bl = blocksMoving.get(z);
+			bl.setBlockCurrent(bl.getBlockSleep());
 			
 			for(int i = 0; i < blocksMoving.size(); i++) {
-				Rectangle zv = blocksMoving.get(i);
-				if(bl.overlaps(zv) && bl != zv) {
+				Rectangle zv = blocksMoving.get(i).getBlockRectangle();
+				if(bl.getBlockRectangle().overlaps(zv) && bl.getBlockRectangle() != zv) {
+					moving = false;
 					blocksMoving.remove(bl);
 					blocksStationary.add(bl);
 				}
 			}
 			
 			for(int i = 0; i < blocksStationary.size(); i++) {
-				Rectangle zv = blocksStationary.get(i);
-				if(bl.overlaps(zv) && bl != zv) {
+				Block zv = blocksStationary.get(i);
+				if(bl.getBlockRectangle().overlaps(zv.getBlockRectangle()) && bl != zv) {
+					moving = false;
 					blocksMoving.remove(bl);
 					blocksStationary.add(bl);
 				}
 			}
 			
-			if(twice == false) {
-				if(bl.y - 5 > Constants.BASE_HEIGHT) {
+			if(twice == false && moving == true) {
+				if(bl.getBlockRectangle().y - 5 > Constants.BASE_HEIGHT) {
 					//bl.y -= 200 * Gdx.graphics.getDeltaTime();
-					bl.y -= 5;
+					bl.getBlockRectangle().y -= 5;
 				} else {
-					bl.y = Constants.BASE_HEIGHT;
+					bl.getBlockRectangle().y = Constants.BASE_HEIGHT;
 				}
 			}
 			
-			overLappCheck(bl, plr, true);
+			overLappCheck(bl, plr, moving);
 		}
 		
 		player.setFalling(fall);
@@ -89,43 +98,47 @@ public class Blocks {
 		}
 	}
 	
-	public void overLappCheck(Rectangle block, Rectangle playerRectangle, boolean blockIsFalling) {
-		if(block.overlaps(playerRectangle)) {	
-			if(isOnBlock(block, playerRectangle)) {
+	public void overLappCheck(Block block, Rectangle playerRectangle, boolean blockIsFalling) {
+		if(block.getBlockRectangle().overlaps(playerRectangle)) {	
+			if(isOnBlock(block.getBlockRectangle(), playerRectangle)) {
+				GameScreen.cameraFallSpeed = 5;
 				fall = false;
-				player.setY((int) (block.y + block.height - 1));
+				player.setY((int) (block.getBlockRectangle().y + block.getBlockRectangle().height - 1));
 				if(player.getJump() > 18) {
 					player.setJump(0);
 					player.setJumping(false);
 				}
 				player.setWaitTime(player.getWaitTime() == 0 ? 5 : player.getWaitTime());
 			} else {
-				if(isUnderBlock(block, playerRectangle)) {
-					if(fall == false && blockIsFalling == false) {
+				if(isUnderBlock(block.getBlockRectangle(), playerRectangle)) {
+					if(fall == false && blockIsFalling == true) {
 						player.setDead(true);
 					} else {
 						player.setJump(20);
 					}
+					
 				}
 				
-				if(overLapsRightSide(block, playerRectangle)) {
+				if(overLapsRightSide(block.getBlockRectangle(), playerRectangle)) {
 					player.setMaxSpeedLeft((int) 0);
-					player.setX((int) (block.x + block.width - 1));
+					player.setX((int) (block.getBlockRectangle().x + block.getBlockRectangle().width - 1));
 //					if(-Gdx.input.getAccelerometerX() < -0.1F) {
 //						player.setFallSpeed(3); //avalanche side jumping
 //						player.setJump(0);
 //						player.setJumping(false);
 //					}
-				} else if(overLapsLeftSide(block, playerRectangle)){				
+				} else if(overLapsLeftSide(block.getBlockRectangle(), playerRectangle)){				
 					player.setMaxSpeedRight((int) 0);
-					player.setX((int) (block.x - player.getWidth() + 1));
+					player.setX((int) (block.getBlockRectangle().x - player.getWidth() + 1));
 //					if(-Gdx.input.getAccelerometerX() > 0.1F) {
 //						player.setFallSpeed(3);
 //						player.setJump(0);
 //						player.setJumping(false);
 //					}
 				}	
-			}		
+			}
+			
+			block.setBlockCurrent(block.getBlockAwake());
 		}
 	}
 	
@@ -146,32 +159,38 @@ public class Blocks {
 	}
 
 	public void spawnBlock() {
-		Rectangle block = new Rectangle();
+		blah++;
+		Rectangle rect = new Rectangle();
 		int rand = MathUtils.random(Constants.SCREEN_WIDTH - 153);
-		block.x = rand;		
-		block.y = player.getY() + 1000;
+		rect.x = rand;		
+		rect.y = player.getY() + 1300; 
 		rand =  MathUtils.random(100);
-		block.width = rand > 50 ? 102 : 153;
-		block.height = rand > 50 ? 108 : 162;
+		rect.width = rand > 50 ? 102 : 153;
+		rect.height = rand > 50 ? 108 : 162;
 		
-		if(lastSpawn != null && block.overlaps(lastSpawn)) {
+		if(lastSpawn != null) {
 			if(lastSpawn.x < 360) {
-				block.x = MathUtils.random(lastSpawn.x + 153, Constants.SCREEN_WIDTH);
+				int xSpawn = (int) (lastSpawn.x + 153 > 360 ? lastSpawn.x + 160 : 360);
+				rect.x = MathUtils.random(xSpawn, Constants.SCREEN_WIDTH - 153);
 			} else {
-				block.x = MathUtils.random(0, lastSpawn.x - 1);
+				int xSpawn = (int) (lastSpawn.x < 360 ? lastSpawn.x - 10 : 360);
+				rect.x = MathUtils.random(0, xSpawn);
 			}
 		}
 		
+		Block block = new Block(new Texture(Gdx.files.internal("blockasleep.png")), new Texture(Gdx.files.internal("blockawake.png")), rect);
+		block.setBlockCurrent(new Texture(Gdx.files.internal("blockasleep.png")));
+		
 		blocksMoving.add(block);
 		lastDropTime = TimeUtils.millis();
-		lastSpawn = block;
+		lastSpawn = new Rectangle(rect.x, rect.y, rect.width, rect.height);
 	}
 
 	public long getLastDropTime() {
 		return lastDropTime;
 	}
 
-	public ArrayList<Rectangle> getBlocksMoving() {
+	public ArrayList<Block> getBlocksMoving() {
 		return blocksMoving;
 	}
 
@@ -183,11 +202,11 @@ public class Blocks {
 		this.player = player;
 	}
 
-	public ArrayList<Rectangle> getBlocksStationary() {
+	public ArrayList<Block> getBlocksStationary() {
 		return blocksStationary;
 	}
 
-	public void setBlocksStationary(ArrayList<Rectangle> blocksStationary) {
+	public void setBlocksStationary(ArrayList<Block> blocksStationary) {
 		this.blocksStationary = blocksStationary;
 	}
 
