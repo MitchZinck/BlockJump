@@ -20,7 +20,6 @@ public class BlockLogic {
 	private static Player player;
 	private boolean fall;
 	private Rectangle lastSpawn;
-	public static int blah = 0;
 
 	public BlockLogic(Player player) {
 		this.setPlayer(player);
@@ -32,7 +31,7 @@ public class BlockLogic {
 	 * 		Determines whether the thread is updating for a second time. Updates a second time if the player is halfway across the screen.
 	 */
 	public void update(boolean twice) {
-		GameScreen.cameraFallSpeed = 20;
+		GameScreen.cameraFallSpeed = player.getFallSpeed();
 		Rectangle plr = player.getPlayerRectangle();
 		Block bl;
 		
@@ -42,7 +41,7 @@ public class BlockLogic {
 			player.setMaxSpeedRight(20);
 		} else { 		
 			int x = 0;			
-			if(player.getX() + player.getWidth() > Constants.SCREEN_WIDTH) {
+			if(player.getX() + player.getDimension() > Constants.SCREEN_WIDTH) {
 				x = player.getX() - Constants.SCREEN_WIDTH;
 			} else if(player.getX() < 0) {
 				x = player.getX() + Constants.SCREEN_WIDTH;
@@ -104,7 +103,7 @@ public class BlockLogic {
 				GameScreen.cameraFallSpeed = 5;
 				fall = false;
 				player.setY((int) (block.getBlockRectangle().y + block.getBlockRectangle().height - 1));
-				if(player.getJump() > 18) {
+				if(player.getJump() > Constants.JUMP_LENGTH) {
 					player.setJump(0);
 					player.setJumping(false);
 				}
@@ -114,7 +113,7 @@ public class BlockLogic {
 					if(fall == false && blockIsFalling == true) {
 						player.setDead(true);
 					} else {
-						player.setJump(20);
+						player.setJump(Constants.JUMP_LENGTH + 1);
 					}
 					
 				}
@@ -129,7 +128,7 @@ public class BlockLogic {
 //					}
 				} else if(overLapsLeftSide(block.getBlockRectangle(), playerRectangle)){				
 					player.setMaxSpeedRight((int) 0);
-					player.setX((int) (block.getBlockRectangle().x - player.getWidth() + 1));
+					player.setX((int) (block.getBlockRectangle().x - player.getDimension() + 1));
 //					if(-Gdx.input.getAccelerometerX() > 0.1F) {
 //						player.setFallSpeed(3);
 //						player.setJump(0);
@@ -143,11 +142,11 @@ public class BlockLogic {
 	}
 	
 	public static boolean isUnderBlock(Rectangle block, Rectangle playerRectangle) {
-		return playerRectangle.y + player.getWidth() >= block.y && playerRectangle.y + player.getWidth() <= block.y + 20;
+		return playerRectangle.y + player.getDimension() >= block.y && playerRectangle.y + player.getDimension() <= block.y + player.getJumpSpeed();
 	}
 	
 	public static boolean isOnBlock(Rectangle block, Rectangle playerRectangle) {
-		return block.y + block.height >= playerRectangle.y && block.y + (block.height - 20) <= playerRectangle.y;
+		return block.y + block.height >= playerRectangle.y && block.y + (block.height - player.getFallSpeed()) <= playerRectangle.y;
 	}
 	
 	public static boolean overLapsRightSide(Rectangle block, Rectangle playerRectangle) {
@@ -155,15 +154,18 @@ public class BlockLogic {
 	}
 	
 	public static boolean overLapsLeftSide(Rectangle block, Rectangle playerRectangle) {
-		return block.x <= playerRectangle.x + player.getWidth() && block.x + player.getMaxSpeedRight() >= playerRectangle.x + player.getWidth() ;
+		return block.x <= playerRectangle.x + player.getDimension() && block.x + player.getMaxSpeedRight() >= playerRectangle.x + player.getDimension() ;
 	}
 
 	public void spawnBlock() {
-		blah++;
 		Rectangle rect = new Rectangle();
 		int rand = MathUtils.random(Constants.SCREEN_WIDTH - 153);
-		rect.x = rand;		
-		rect.y = player.getY() + 1300; 
+		rect.x = rand;	
+		if(lastSpawn != null) {
+			rect.y = lastSpawn.y + 170; 
+		} else {
+			rect.y = player.getY() + 1300;
+		}
 		rand =  MathUtils.random(100);
 		rect.width = rand > 50 ? 102 : 153;
 		rect.height = rand > 50 ? 108 : 162;

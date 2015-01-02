@@ -10,14 +10,14 @@ public class Player {
 	
 	private int x = Constants.SCREEN_WIDTH / 2 - 64 / 2;
 	private int y = Constants.BASE_HEIGHT;
-	private int jump = 0, jumpSpeed = 20, fallSpeed = 20, width = 64, height = 64, waitTime = 0;
-	private int maxSpeedRight = 20, maxSpeedLeft = 20, currentScore = 0, highScore;
+	private int jump = 0, jumpSpeed = 20, fallSpeed = 20, dimension = 64, waitTime = 0;
+	private int maxSpeedRight = 20, maxSpeedLeft = 20, currentScore = 0, highScore = 0;
 	private boolean jumping = false, falling = true, checkBoth = false;
 	private Sound jumpSound;
 	private Texture jumpTexture = new Texture(Gdx.files.internal("playerjump.png"));
 	private Texture neutralTexture = new Texture(Gdx.files.internal("player.png"));
 	private Texture currentTexture = neutralTexture;
-	private boolean dead = false;
+	private boolean dead = false, playMenu = false;
 	private BlockLogic blocks;
 
 	public Player() {
@@ -25,7 +25,7 @@ public class Player {
 	}
 	
 	public void update() {
-		currentScore = (y - 20) / 10;
+		currentScore = (y - Constants.BASE_HEIGHT) / 10;
 		float acceleration = -Gdx.input.getAccelerometerX();
 		if(acceleration >= 0.3F || acceleration <= -0.3F) {
 			if(10 * acceleration > maxSpeedRight) {
@@ -40,21 +40,21 @@ public class Player {
 				}
 			}
 			
-			if(x + width > Constants.SCREEN_WIDTH && acceleration > 0) {
+			if(x + dimension > Constants.SCREEN_WIDTH && acceleration > 0) {
 				x = x - Constants.SCREEN_WIDTH;
 			} else if(x < 0 && acceleration < 0) {
 				x = x + Constants.SCREEN_WIDTH;
 			}
 		}
 
-		if(Gdx.input.isTouched() && jumping == false && waitTime == 0) {
+		if((Gdx.input.isTouched() || playMenu == true) && jumping == false && waitTime == 0) {
 			jumpSound.play();
 			jumping = true;
 		}
 
 		if(jumping == true) {
 			currentTexture = jumpTexture;
-			if(jump < 18) {
+			if(jump < Constants.JUMP_LENGTH) {
 				y += jumpSpeed;
 			} else {
 				y -= fallSpeed;
@@ -75,12 +75,16 @@ public class Player {
 		fallSpeed = 20;
 	}
 	
-	public String getCurrentScore() {
-		return Integer.toString(currentScore);
+	public void setPlayMenu(boolean playMenu) {
+		this.playMenu = playMenu;
+	}
+	
+	public int getCurrentScore() {
+		return currentScore;
 	}
 
-	public String getHighScore() {
-		return Integer.toString(highScore);
+	public int getHighScore() {
+		return highScore;
 	}
 	
 	public Texture getCurrentTexture() {
@@ -112,12 +116,12 @@ public class Player {
 		return x;
 	}
 	
-	public int getWidth() {
-		return width;
+	public int getDimension() {
+		return dimension;
 	}
 
-	public void setWidth(int width) {
-		this.width = width;
+	public void setDimension(int dimension) {
+		this.dimension = dimension;
 	}
 	
 	public boolean isDead() {

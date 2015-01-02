@@ -23,20 +23,20 @@ public class SplashScreen implements Screen {
  
 	@Override
 	public void render(float delta) {
-		Gdx.gl.glClearColor(0, 0, 0.2f, 1);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+//		Gdx.gl.glClearColor(0, 0, 0.2f, 1);
+//		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+// 
+//		camera.update();
+//		game.batch.setProjectionMatrix(camera.combined);
+// 
+//		game.batch.begin();
+//		game.batch.draw(logo, (Constants.SCREEN_HEIGHT / 2) - logo.getWidth() / 2, (Constants.SCREEN_WIDTH / 2) - logo.getHeight() / 2);
+//		game.batch.end();
  
-		camera.update();
-		game.batch.setProjectionMatrix(camera.combined);
- 
-		game.batch.begin();
-		game.batch.draw(logo, (Constants.SCREEN_HEIGHT / 2) - logo.getWidth() / 2, (Constants.SCREEN_WIDTH / 2) - logo.getHeight() / 2);
-		game.batch.end();
- 
-		if (Gdx.input.isTouched()) {
+//		if (Gdx.input.isTouched()) {
 			game.setScreen(new GameScreen(game));
 			dispose();
-		}
+//		}
 	}
  
 	@Override
@@ -66,6 +66,6 @@ public class SplashScreen implements Screen {
  
 	@Override
 	public void dispose() {
-		
+		logo.dispose();
 	}
 }
