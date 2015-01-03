@@ -8,8 +8,9 @@ public class BlockJump extends Game {
  
 	SpriteBatch batch;
 	BitmapFont font;
- 
+
 	public void create() {
+		GameState.state = GameState.PLAY_MENU;
 		batch = new SpriteBatch();
 		font = new BitmapFont();
 		this.setScreen(new SplashScreen(this));

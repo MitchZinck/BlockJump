@@ -14,8 +14,9 @@ public class Player {
 	private int maxSpeedRight = 20, maxSpeedLeft = 20, currentScore = 0, highScore = 0;
 	private boolean jumping = false, falling = true, checkBoth = false;
 	private Sound jumpSound;
-	private Texture jumpTexture = new Texture(Gdx.files.internal("playerjump.png"));
+	private Texture jumpTexture = new Texture(Gdx.files.internal("playerjump.png")); // Make texture region
 	private Texture neutralTexture = new Texture(Gdx.files.internal("player.png"));
+	private Texture deadTexture = new Texture(Gdx.files.internal("playerdead.png"));
 	private Texture currentTexture = neutralTexture;
 	private boolean dead = false, playMenu = false;
 	private BlockLogic blocks;
@@ -75,6 +76,14 @@ public class Player {
 		fallSpeed = 20;
 	}
 	
+	public Texture getDeadTexture() {
+		return deadTexture;
+	}
+
+	public void setDeadTexture(Texture deadTexture) {
+		this.deadTexture = deadTexture;
+	}
+
 	public void setPlayMenu(boolean playMenu) {
 		this.playMenu = playMenu;
 	}

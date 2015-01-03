@@ -20,6 +20,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.mzinck.blockjump.android.AndroidRequestHandler;
 import com.mzinck.blockjump.blocks.Block;
 import com.mzinck.blockjump.blocks.BlockLogic;
 import com.mzinck.blockjump.lava.Lava;
@@ -27,6 +28,7 @@ import com.mzinck.blockjump.lava.Lava;
 public class GameScreen implements Screen {
 	
 	private final BlockJump game;
+	private AndroidRequestHandler androidHandler;
 	private Player player;
 	private Lava lava;
 	private BlockLogic blockLogic;
@@ -38,24 +40,34 @@ public class GameScreen implements Screen {
 	private OrthographicCamera camera;
 	private int textHeight = Constants.SCREEN_HEIGHT;
 	private int currentScroll = 3700, nextScroll = 4700;
+	private int backgroundX;
+	private int playerDeadY = 0;
+	private long lastTimeBg;
 	private boolean debug = false;
 	private Stage pauseStage, pauseMenuStage, playMenuStage;
 	private Table pauseTable, pauseMenuTable, playMenuTable;
 	private Button resumeButton, playButton, highScoreButton, pauseButton;
-	private GameState gameState;
 	private ShapeRenderer shapeRenderer = new ShapeRenderer();
     
     private TextureRegion[] buttons = new TextureRegion[3];
 	
 	public static int cameraFallSpeed = 20;
+	
+	/**
+	 * TODO - **Semi done?Death animation, death screen, buttons? **, **Ads, fix game glitches, smooth it out, add highscores, rotating background
+	 * @param game
+	 */ 
  
 	public GameScreen(final BlockJump game) {
-		gameState = GameState.PLAY_MENU;
-		this.game = game;
+		this.game = game;		
+		androidHandler = Constants.androidApp;
+		androidHandler.hideAds();
 		
-		player = new Player();	
-		player.setJumping(true);
-		player.setPlayMenu(true);
+		player = new Player();
+		if(GameState.state == GameState.PLAY_MENU) {
+			player.setJumping(true);
+			player.setPlayMenu(true);
+		}
 		Preferences prefs = Gdx.app.getPreferences("Blockjump");
 		player.setHighScore(prefs.getInteger("highscore"));
 		prefs.flush();
@@ -63,11 +75,7 @@ public class GameScreen implements Screen {
 		
 		blockLogic = new BlockLogic(player);
 		lava = new Lava();
-		// load the drop sound effect and the rain background "music"
-		//rainMusic = Gdx.audio.newMusic(Gdx.files.internal("rain.mp3"));
-		//rainMusic.setLooping(true);
- 
-		// create the camera and the SpriteBatch
+
 		camera = new OrthographicCamera();
 		camera.setToOrtho(false, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT); 
 		
@@ -86,11 +94,13 @@ public class GameScreen implements Screen {
 	    Gdx.input.setInputProcessor(playMenuStage);
 	    
 	    blockLogic.spawnBlock();
+	    
+	    backgroundX = Constants.SCREEN_WIDTH;
+	    lastTimeBg = TimeUtils.nanoTime();
 	}
  
 	@Override
-	public void render(float delta) {
-		
+	public void render(float delta) {	
 		// clear the screen with a dark blue color. The
 		// arguments to glClearColor are the red, green
 		// blue and alpha component in the range [0,1]
@@ -98,30 +108,99 @@ public class GameScreen implements Screen {
 		Gdx.gl.glClearColor(0, 0, 0.2f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
  
-		// tell the camera to update its matrices.
-		if(player.getY() > camera.position.y + (camera.viewportHeight * .10f)) {
-			camera.position.y += player.getJumpSpeed();
-			textHeight += player.getJumpSpeed();
-		} else if(player.getY() < (camera.position.y - (camera.viewportHeight * .5f)) + Constants.BASE_HEIGHT) {
-			camera.position.y -= player.getFallSpeed();
-			textHeight -= cameraFallSpeed;
+		// tell the camera to update its matrices.		
+		camera.update();				
+		renderGame();		
+		
+		switch(GameState.state) {
+		
+			case RUNNING:
+				renderShapes();		
+				if(player.getY() > camera.position.y + (camera.viewportHeight * .10f)) {
+					camera.position.y += player.getJumpSpeed();
+					textHeight += player.getJumpSpeed();
+				} else if(player.getY() < (camera.position.y - (camera.viewportHeight * .5f)) + Constants.BASE_HEIGHT) {
+					camera.position.y -= player.getFallSpeed();
+					textHeight -= cameraFallSpeed;
+				}
+				
+				if(TimeUtils.millis() - blockLogic.getLastDropTime() > 500) {
+					blockLogic.spawnBlock();
+				}
+				
+				player.update();
+				blockLogic.update(false);
+				lava.update(player);
+				
+			    pauseStage.act(Gdx.graphics.getDeltaTime());
+			    pauseStage.draw();
+
+				if(player.isDead()) {			
+					if(player.getCurrentScore() > player.getHighScore()) {
+						Preferences prefs = Gdx.app.getPreferences("Blockjump");
+						prefs.putInteger("highscore", player.getCurrentScore());
+						prefs.flush();
+					}
+					playerDeadY = player.getY();
+					player.setCurrentTexture(player.getDeadTexture());
+					androidHandler.showAds();
+					GameState.state = GameState.DEAD_SETUP;
+				}
+				break;
+				
+			case PLAY_MENU:
+				player.setJumping(true);
+				player.update();
+			    playMenuStage.act(Gdx.graphics.getDeltaTime());
+			    playMenuStage.draw();
+				break;
+				
+			case DEAD_SETUP:
+				if(camera.position.y > Constants.SCREEN_HEIGHT / 2) {
+					camera.position.y -= camera.position.y / 100;
+					player.setY((int) (player.getY() - (camera.position.y / 100)));
+				} else {
+					camera.position.y = Constants.SCREEN_HEIGHT / 2;
+					GameState.state = GameState.DEAD;
+					Gdx.input.setInputProcessor(playMenuStage);
+				}
+				break;
+				
+			case DEAD:
+				playMenuStage.act(Gdx.graphics.getDeltaTime());
+			    playMenuStage.draw();
+				break;
+				
+			case PAUSED:
+				renderShapes();		
+				pauseMenuStage.act(Gdx.graphics.getDeltaTime());
+			    pauseMenuStage.draw();
+	
+			    pauseMenuTable.drawDebug(shapeRenderer);
+				break;
+		
 		}
 		
-		camera.update();		
- 
-		// tell the SpriteBatch to render in the
-		// coordinate system specified by the camera.
-		game.batch.setProjectionMatrix(camera.combined);
-		
-		game.batch.begin();
-		
+		if(player.getWaitTime() > 0) {
+			player.setWaitTime(player.getWaitTime() - 1);
+		}
+	    //pauseTable.drawDebug(shapeRenderer); // This is optional, but enables debug lines for tables.	
+	}
+	
+	public void renderBackground() {
 		if(player.getY() < 300) { 
 			game.batch.draw(background, 0, 0);
+			game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, 400);
+			game.batch.draw(backgroundScroll, backgroundX, 400);
 		} else if(player.getY() > currentScroll - 1000) {
-			game.batch.draw(backgroundScroll, 0, currentScroll - 2000);
-			game.batch.draw(backgroundScroll, 0, currentScroll);
+			game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, currentScroll - 2000);
+			game.batch.draw(backgroundScroll, backgroundX, currentScroll - 2000);
+			
+			game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, currentScroll);
+			game.batch.draw(backgroundScroll, backgroundX, currentScroll);
 			if(nextScroll - 1000 < player.getY()) {
-				game.batch.draw(backgroundScroll, 0, nextScroll);
+				game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, nextScroll);
+				game.batch.draw(backgroundScroll, backgroundX, nextScroll);
 			}
 			if(player.getY() > nextScroll) {
 				currentScroll = nextScroll;
@@ -129,8 +208,28 @@ public class GameScreen implements Screen {
 			}			
 		} else {
 			game.batch.draw(background, 0, 0);
-			game.batch.draw(backgroundScroll, 0, 1700);
+			game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, 400);
+			game.batch.draw(backgroundScroll, backgroundX, 400);
+			
+			game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, 1700);
+			game.batch.draw(backgroundScroll, backgroundX, 1700);
+		}		
+		if(TimeUtils.nanoTime() - lastTimeBg > 16666666.66){
+			backgroundX -= 1;
+			lastTimeBg = TimeUtils.nanoTime();
 		}
+		
+		if(backgroundX <= 0){
+			backgroundX = Constants.SCREEN_WIDTH;
+		}
+	}
+	
+	public void renderGame() {			 
+		// tell the SpriteBatch to render in the
+		// coordinate system specified by the camera.
+		game.batch.setProjectionMatrix(camera.combined);		
+		game.batch.begin();		
+		renderBackground();
 		game.batch.draw(sun, 10, textHeight - 100);
 		
 		for(Block blz: blockLogic.getBlocksMoving()) {
@@ -140,7 +239,11 @@ public class GameScreen implements Screen {
 	        game.batch.draw(blz.getBlockCurrent(), blz.getBlockRectangle().x, blz.getBlockRectangle().y, blz.getBlockRectangle().getWidth(), blz.getBlockRectangle().getHeight());
 		}
 		
-		game.batch.draw(player.getCurrentTexture(), player.getX(), player.getY());
+		if(GameState.state == GameState.DEAD_SETUP || GameState.state == GameState.DEAD) {
+			game.batch.draw(player.getCurrentTexture(), player.getX(), playerDeadY);
+		} else {
+			game.batch.draw(player.getCurrentTexture(), player.getX(), player.getY());
+		}
 		if(64 + player.getX() > Constants.SCREEN_WIDTH) {
 			player.setCheckBoth(true);
 			game.batch.draw(player.getCurrentTexture(), player.getX() - Constants.SCREEN_WIDTH, player.getY());
@@ -159,8 +262,10 @@ public class GameScreen implements Screen {
 			game.font.draw(game.batch, Integer.toString(player.getCurrentScore()), 0, textHeight);
 		}
 		
-		game.batch.end();
-		
+		game.batch.end();	
+	}
+	
+	public void renderShapes() {
 		shapeRenderer.setProjectionMatrix(camera.combined);
 		
 	    shapeRenderer.begin(ShapeType.Filled);
@@ -168,50 +273,6 @@ public class GameScreen implements Screen {
 	    shapeRenderer.rect(0, lava.getHeight() - 800, Constants.SCREEN_WIDTH, 800);
 	    
 	    shapeRenderer.end();
-		
-		switch(gameState) {
-		
-			case RUNNING: 
-				if(TimeUtils.millis() - blockLogic.getLastDropTime() > 500) {
-					blockLogic.spawnBlock();
-				}
-				player.update();
-				blockLogic.update(false);
-				lava.update(player);			
-			    pauseStage.act(Gdx.graphics.getDeltaTime());
-			    pauseStage.draw();
-				break;
-				
-			case PLAY_MENU:
-				player.setJumping(true);
-				player.update();
-			    playMenuStage.act(Gdx.graphics.getDeltaTime());
-			    playMenuStage.draw();
-				break;
-				
-			case PAUSED:
-				pauseMenuStage.act(Gdx.graphics.getDeltaTime());
-			    pauseMenuStage.draw();
-	
-			    pauseMenuTable.drawDebug(shapeRenderer);
-				break;
-		
-		}
-		
-		if(player.getWaitTime() > 0) {
-			player.setWaitTime(player.getWaitTime() - 1);
-		}
-
-		if(player.isDead()) {			
-			if(player.getCurrentScore() > player.getHighScore()) {
-				Preferences prefs = Gdx.app.getPreferences("Blockjump");
-				prefs.putInteger("highscore", player.getCurrentScore());
-				prefs.flush();
-			}
-			dispose();
-			game.setScreen(new GameScreen(game));
-		}
-	    //pauseTable.drawDebug(shapeRenderer); // This is optional, but enables debug lines for tables.	
 	}
 	
 	/**
@@ -236,7 +297,7 @@ public class GameScreen implements Screen {
 		pauseButton.addListener(new ChangeListener() {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
-				if(gameState == GameState.RUNNING) {
+				if(GameState.state == GameState.RUNNING) {
 					pause();		
 				} else {
 					resume();
@@ -294,10 +355,17 @@ public class GameScreen implements Screen {
 		playButton.addListener(new ChangeListener() {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
-				player.setJumping(false);
-				player.setPlayMenu(false);
-				player.setJump(0);
-				resume();
+				if(GameState.state == GameState.PLAY_MENU) {
+					player.setJumping(false);
+					player.setPlayMenu(false);
+					player.setJump(0);
+					resume();
+				} else if(GameState.state == GameState.DEAD) {
+					dispose();
+					GameState.state = GameState.RUNNING;
+					Gdx.input.setInputProcessor(pauseStage);
+					game.setScreen(new GameScreen(game));
+				} 
 			}
 		});
 		
@@ -307,7 +375,7 @@ public class GameScreen implements Screen {
 				
 			}
 		});
-	}
+	}	
  
 	@Override
 	public void resize(int width, int height) {
@@ -326,13 +394,16 @@ public class GameScreen implements Screen {
  
 	@Override
 	public void pause() {
-		gameState = GameState.PAUSED;
+		androidHandler.showAds();
+		GameState.state = GameState.PAUSED;
 	    Gdx.input.setInputProcessor(pauseMenuStage);
 	}
  
 	@Override
 	public void resume() {
-		gameState = GameState.RUNNING;
+		player.setPlayMenu(false);
+		androidHandler.hideAds();
+		GameState.state = GameState.RUNNING;
 	    Gdx.input.setInputProcessor(pauseStage);
 	}
  
