@@ -1,32 +1,33 @@
 package com.mzinck.blockjump.blocks;
 
-import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 
 public class Block {
 	
-	private Texture blockCurrent, blockSleep, blockAwake;
+	private TextureRegion blockCurrent, blockSleep, blockAwake;
 	private Rectangle blockRectangle;
 	
-	public Block(Texture blockSleep, Texture blockAwake, Rectangle blockRectangle) {
+	public Block(TextureRegion blockSleep, TextureRegion blockAwake, Rectangle blockRectangle) {
 		this.blockSleep = blockSleep;
 		this.blockAwake = blockAwake;
 		this.blockRectangle = blockRectangle;
+		this.blockCurrent = blockSleep;
 	}
 
-	public Texture getBlockSleep() {
+	public TextureRegion getBlockSleep() {
 		return blockSleep;
 	}
 
-	public void setBlockSleep(Texture blockSleep) {
+	public void setBlockSleep(TextureRegion blockSleep) {
 		this.blockSleep = blockSleep;
 	}
 
-	public Texture getBlockAwake() {
+	public TextureRegion getBlockAwake() {
 		return blockAwake;
 	}
 
-	public void setBlockAwake(Texture blockAwake) {
+	public void setBlockAwake(TextureRegion blockAwake) {
 		this.blockAwake = blockAwake;
 	}
 
@@ -38,11 +39,11 @@ public class Block {
 		this.blockRectangle = blockRect;
 	}
 
-	public Texture getBlockCurrent() {
+	public TextureRegion getBlockCurrent() {
 		return blockCurrent;
 	}
 
-	public void setBlockCurrent(Texture blockCurrent) {
+	public void setBlockCurrent(TextureRegion blockCurrent) {
 		this.blockCurrent = blockCurrent;
 	}
 			

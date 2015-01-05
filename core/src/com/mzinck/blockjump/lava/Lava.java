@@ -13,7 +13,7 @@ public class Lava {
 	public void update(Player player) {
 		height += 1;
 		if(player.getY() <= height) {
-			player.setDead(true);
+			player.kill();
 		}
 	}
 	

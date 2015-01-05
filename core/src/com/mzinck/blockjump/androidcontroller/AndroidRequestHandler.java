@@ -1,4 +1,4 @@
-package com.mzinck.blockjump.android;
+package com.mzinck.blockjump.androidcontroller;
 
 public interface AndroidRequestHandler {
 		

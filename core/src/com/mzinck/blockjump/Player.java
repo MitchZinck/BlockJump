@@ -3,6 +3,7 @@ package com.mzinck.blockjump;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 import com.mzinck.blockjump.blocks.BlockLogic;
 
@@ -13,31 +14,50 @@ public class Player {
 	private int jump = 0, jumpSpeed = 20, fallSpeed = 20, dimension = 64, waitTime = 0;
 	private int maxSpeedRight = 20, maxSpeedLeft = 20, currentScore = 0, highScore = 0;
 	private boolean jumping = false, falling = true, checkBoth = false;
-	private Sound jumpSound;
-	private Texture jumpTexture = new Texture(Gdx.files.internal("playerjump.png")); // Make texture region
-	private Texture neutralTexture = new Texture(Gdx.files.internal("player.png"));
-	private Texture deadTexture = new Texture(Gdx.files.internal("playerdead.png"));
-	private Texture currentTexture = neutralTexture;
+	private Sound jumpSound = Gdx.audio.newSound(Gdx.files.internal("jump.wav"));
+	private TextureRegion jumpTexture; // Make texture region
+	private TextureRegion neutralTexture;
+	private TextureRegion deadTexture;
+	private TextureRegion currentTexture;
 	private boolean dead = false, playMenu = false;
 	private BlockLogic blocks;
+	private Rectangle pz = new Rectangle();
+	private float accelVals = 0;
 
-	public Player() {
-		jumpSound = Gdx.audio.newSound(Gdx.files.internal("jump.wav"));
+	/**
+	 * @see http://en.wikipedia.org/wiki/Low-pass_filter#Algorithmic_implementation
+	 * @see http://en.wikipedia.org/wiki/Low-pass_filter#Simple_infinite_impulse_response_filter
+	 */
+	public float lowPass(float input, float output ) {
+	    if(output == 0) {
+	    	accelVals = input;
+	    	return input;
+	    }
+	    output = output + Constants.ALPHA * (input - output);
+	    accelVals = output;
+	    return output;
+	}
+
+	public Player(TextureRegion jumpTexture, TextureRegion neutralTexture, TextureRegion deadTexture) {
+		this.jumpTexture = jumpTexture;
+		this.neutralTexture = neutralTexture;
+		this.deadTexture = deadTexture;
+		currentTexture = neutralTexture;
 	}
 	
 	public void update() {
 		currentScore = (y - Constants.BASE_HEIGHT) / 10;
-		float acceleration = -Gdx.input.getAccelerometerX();
-		if(acceleration >= 0.3F || acceleration <= -0.3F) {
-			if(10 * acceleration > maxSpeedRight) {
+		float acceleration = lowPass(-Gdx.input.getAccelerometerX(), accelVals);
+		//if(acceleration >= 0.3F || acceleration <= -0.3F) {
+			if(5 * acceleration > maxSpeedRight) {
 				x += maxSpeedRight;
-			} else if(10 * acceleration < -maxSpeedLeft) {
+			} else if(5 * acceleration < -maxSpeedLeft) {
 				x -= maxSpeedLeft;
 			} else {
 				if(acceleration > 0) {
-					x += Math.round(10 * acceleration);
+					x += Math.round(5 * acceleration);
 				} else if(acceleration < 0) {
-					x += Math.floor(10 * acceleration);
+					x += Math.floor(5 * acceleration);
 				}
 			}
 			
@@ -46,7 +66,7 @@ public class Player {
 			} else if(x < 0 && acceleration < 0) {
 				x = x + Constants.SCREEN_WIDTH;
 			}
-		}
+		//}
 
 		if((Gdx.input.isTouched() || playMenu == true) && jumping == false && waitTime == 0) {
 			jumpSound.play();
@@ -76,12 +96,16 @@ public class Player {
 		fallSpeed = 20;
 	}
 	
-	public Texture getDeadTexture() {
+	public TextureRegion getNeutralTexture() {
+		return neutralTexture;
+	}
+	
+	public TextureRegion getDeadTexture() {
 		return deadTexture;
 	}
 
-	public void setDeadTexture(Texture deadTexture) {
-		this.deadTexture = deadTexture;
+	public void setDeadTexture(TextureRegion spriteSheet) {
+		this.deadTexture = spriteSheet;
 	}
 
 	public void setPlayMenu(boolean playMenu) {
@@ -92,28 +116,35 @@ public class Player {
 		return currentScore;
 	}
 
+	public void setJumpTexture(TextureRegion spriteSheet) {
+		this.jumpTexture = spriteSheet;
+	}
+
+	public void setNeutralTexture(TextureRegion neutralTexture) {
+		this.neutralTexture = neutralTexture;
+	}
+
 	public int getHighScore() {
 		return highScore;
 	}
 	
-	public Texture getCurrentTexture() {
+	public TextureRegion getCurrentTexture() {
 		return currentTexture;
 	}
 
-	public void setCurrentTexture(Texture currentTexture) {
-		this.currentTexture = currentTexture;
+	public void setCurrentTexture(TextureRegion spriteSheet) {
+		this.currentTexture = spriteSheet;
 	}
 
 	public void setHighScore(int highScore) {
 		this.highScore = highScore;
 	}
 	
-	public void setDead(boolean dead) {
-		this.dead = dead;
+	public void kill() {
+		dead = true;
 	}
 	
 	public Rectangle getPlayerRectangle() {
-		Rectangle pz = new Rectangle();
 		pz.x = x;
 		pz.y = y;
 		pz.width = 64;

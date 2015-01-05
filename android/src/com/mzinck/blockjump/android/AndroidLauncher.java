@@ -1,5 +1,6 @@
 package com.mzinck.blockjump.android;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -7,14 +8,12 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.RelativeLayout;
-
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
 import com.mzinck.blockjump.BlockJump;
-import com.mzinck.blockjump.Constants;
+import com.mzinck.blockjump.androidcontroller.AndroidRequestHandler;
 
 public class AndroidLauncher extends AndroidApplication implements AndroidRequestHandler {
 	
@@ -33,9 +32,8 @@ public class AndroidLauncher extends AndroidApplication implements AndroidReques
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
-        
-        Constants.androidApp = this;
-		View gameView = initializeForView(new BlockJump());
+       
+		View gameView = initializeForView(new BlockJump(this));
 		
 		AdView adMobView = createAdView();// Put in your secret key here this, AdSize.BANNER, "xxxxxxxx"
 		AdRequest.Builder adRequestBuilder = new AdRequest.Builder();
@@ -66,7 +64,8 @@ public class AndroidLauncher extends AndroidApplication implements AndroidReques
 		return layoutParams;		
 	}
 	
-    protected Handler handler = new Handler() {
+    @SuppressLint("HandlerLeak")
+	protected Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             switch(msg.what) {

@@ -1,21 +1,21 @@
 package com.mzinck.blockjump;
  
-import java.awt.Color;
-
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.mzinck.blockjump.androidcontroller.AndroidRequestHandler;
  
 public class SplashScreen implements Screen {
  
 	private final BlockJump game; 
 	private OrthographicCamera camera;
 	private Texture logo;
+	private AndroidRequestHandler arh;
  
-	public SplashScreen(final BlockJump game) {
+	public SplashScreen(final BlockJump game, AndroidRequestHandler arh) {
 		this.game = game;		
+		this.arh = arh;
 		logo = new Texture(Gdx.files.internal("logo.png"));		
 		camera = new OrthographicCamera();
 		camera.setToOrtho(false, Constants.SCREEN_HEIGHT, Constants.SCREEN_WIDTH); 
@@ -34,7 +34,7 @@ public class SplashScreen implements Screen {
 //		game.batch.end();
  
 //		if (Gdx.input.isTouched()) {
-			game.setScreen(new GameScreen(game));
+			game.setScreen(new GameScreen(game, arh));
 			dispose();
 //		}
 	}
