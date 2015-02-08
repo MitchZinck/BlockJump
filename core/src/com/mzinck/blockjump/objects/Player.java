@@ -1,10 +1,11 @@
-package com.mzinck.blockjump;
+package com.mzinck.blockjump.objects;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
+import com.mzinck.blockjump.Constants;
 import com.mzinck.blockjump.blocks.BlockLogic;
 
 public class Player {
@@ -12,7 +13,8 @@ public class Player {
 	private int x = Constants.SCREEN_WIDTH / 2 - 64 / 2;
 	private int y = Constants.BASE_HEIGHT;
 	private int jump = 0, jumpSpeed = 20, fallSpeed = 20, dimension = 64, waitTime = 0;
-	private int maxSpeedRight = 20, maxSpeedLeft = 20, currentScore = 0, highScore = 0;
+	private int maxSpeedRight = 20, maxSpeedLeft = 20;
+	private long currentScore = 0, highScore = 0;
 	private boolean jumping = false, falling = true, checkBoth = false;
 	private Sound jumpSound = Gdx.audio.newSound(Gdx.files.internal("jump.wav"));
 	private TextureRegion jumpTexture; // Make texture region
@@ -23,6 +25,7 @@ public class Player {
 	private BlockLogic blocks;
 	private Rectangle pz = new Rectangle();
 	private float accelVals = 0;
+	private String decompiler = "......"; //Release change this
 
 	/**
 	 * @see http://en.wikipedia.org/wiki/Low-pass_filter#Algorithmic_implementation
@@ -49,15 +52,15 @@ public class Player {
 		currentScore = (y - Constants.BASE_HEIGHT) / 10;
 		float acceleration = lowPass(-Gdx.input.getAccelerometerX(), accelVals);
 		//if(acceleration >= 0.3F || acceleration <= -0.3F) {
-			if(5 * acceleration > maxSpeedRight) {
+			if(7.5 * acceleration > maxSpeedRight) {
 				x += maxSpeedRight;
-			} else if(5 * acceleration < -maxSpeedLeft) {
+			} else if(7.5 * acceleration < -maxSpeedLeft) {
 				x -= maxSpeedLeft;
 			} else {
 				if(acceleration > 0) {
-					x += Math.round(5 * acceleration);
+					x += Math.round(7.5 * acceleration);
 				} else if(acceleration < 0) {
-					x += Math.floor(5 * acceleration);
+					x += Math.floor(7.5 * acceleration);
 				}
 			}
 			
@@ -112,7 +115,7 @@ public class Player {
 		this.playMenu = playMenu;
 	}
 	
-	public int getCurrentScore() {
+	public long getCurrentScore() {
 		return currentScore;
 	}
 
@@ -124,7 +127,7 @@ public class Player {
 		this.neutralTexture = neutralTexture;
 	}
 
-	public int getHighScore() {
+	public long getHighScore() {
 		return highScore;
 	}
 	
@@ -136,7 +139,7 @@ public class Player {
 		this.currentTexture = spriteSheet;
 	}
 
-	public void setHighScore(int highScore) {
+	public void setHighScore(long highScore) {
 		this.highScore = highScore;
 	}
 	

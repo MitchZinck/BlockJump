@@ -8,7 +8,9 @@ public enum GameState {
 	PLAY_MENU,
 	DEAD_SETUP,
 	DEAD,
-	STOPPED;
+	STOPPED,
+	HIGHSCORES,
+	USER_DETAILS;
 	
 	public static GameState state;
 	

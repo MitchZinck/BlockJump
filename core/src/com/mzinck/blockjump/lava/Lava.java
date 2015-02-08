@@ -1,6 +1,6 @@
 package com.mzinck.blockjump.lava;
 
-import com.mzinck.blockjump.Player;
+import com.mzinck.blockjump.objects.Player;
 
 public class Lava {
 	
