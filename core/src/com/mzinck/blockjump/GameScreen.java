@@ -67,17 +67,18 @@ public class GameScreen implements Screen {
 	private int backgroundX;
 	private long lastTimeBg;
 	private boolean debug = false;
+	private boolean madeTop10 = false;
 	public static int cameraFallSpeed = 20;
 	
 	private Stage pauseStage, pauseMenuStage, playMenuStage, highScoreStage, userDetailStage;
 	private Table pauseTable, pauseMenuTable, playMenuTable, highScoreTable, userDetailTable;
-	private Button okButton, pauseButton, backButton, highScoreButton, playButton, userDetailsButton, resumeButton;
+	private Button okButton, pauseButton, backButton, highScoreButton, playButton, userDetailsButton, resumeButton, noThanks;
 	private ShapeRenderer shapeRenderer = new ShapeRenderer();
 	
 	private ArrayList<User> globalList = new ArrayList<User>();
 	private SocketChannel socket;
 	
-    private TextureRegion[] buttons = new TextureRegion[4];
+    private TextureRegion[] buttons = new TextureRegion[5];
     private TextureRegion[] spriteSheet = new TextureRegion[6];
 	private TextureRegion sun = new TextureRegion(spriteSheetTexture, 0.666F, 0, 1F, 0.62352941177F);
 	
@@ -122,15 +123,16 @@ public class GameScreen implements Screen {
 			game.font.setScale(1.5F);
 		}
 		
-		buttons[0] = new TextureRegion(buttonTexture, 0, 0, 0.333F, 0.5F); //Play
-		buttons[1] = new TextureRegion(buttonTexture, 0.333F, 0, 0.666F, 0.5F); //Resume
-		buttons[2] = new TextureRegion(buttonTexture, 0.666F, 0, 1F, 0.5F); //Highscore	    
-		buttons[3] = new TextureRegion(buttonTexture, 0.666F, 0.5F, 1F, 1F);
+		buttons[0] = new TextureRegion(buttonTexture, 0, 0, 0.20F, 1F); //Play
+		buttons[1] = new TextureRegion(buttonTexture, 0.20F, 0, 0.4F, 1F); //Highscore	    
+		buttons[2] = new TextureRegion(buttonTexture, 0.4F, 0, 0.6F, 1F); //back button
+		buttons[3] = new TextureRegion(buttonTexture, 0.6F, 0, 0.8F, 1F); // okbutton
+		buttons[4] = new TextureRegion(buttonTexture, 0.8F, 0, 1F, 1F); // detailsbutton
 				
 	    createPlayMenu();
 	    createPauseButton();
 	    createPauseMenu();
-	    createUserInput();
+	    grabHighScores();
 	    
 	    Preferences prefs = Gdx.app.getPreferences("Blockjump");
 		if (!prefs.contains("name")) {
@@ -194,6 +196,20 @@ public class GameScreen implements Screen {
 						prefs.putBoolean("highscore_submitted", false);
 						prefs.flush();
 						player.setHighScore(player.getCurrentScore());
+						
+						if(!globalList.isEmpty()) {
+							User user = globalList.get(globalList.size() - 1);
+							if(user.getScore() < player.getHighScore()) {
+								prefs = Gdx.app.getPreferences("Blockjump");
+								if(prefs.contains("name")) {
+									prefs.flush();
+									sendHighScore();
+								} else {
+									madeTop10 = true;
+									prefs.flush();
+								}								
+							}
+						}
 					}
 					player.setCurrentTexture(player.getDeadTexture());
 					androidHandler.showAds();
@@ -214,8 +230,15 @@ public class GameScreen implements Screen {
 					textHeight -= camera.position.y / 100;
 				} else {
 					camera.position.y = Constants.SCREEN_HEIGHT / 2;
-					GameState.state = GameState.DEAD;
-					Gdx.input.setInputProcessor(playMenuStage);
+					if(madeTop10 == true) {
+						createUserInput();
+						GameState.state = GameState.USER_DETAILS;
+						Gdx.input.setInputProcessor(userDetailStage);
+						madeTop10 = false;
+					} else {
+						GameState.state = GameState.DEAD;
+						Gdx.input.setInputProcessor(playMenuStage);
+					}
 				}
 				break;
 				
@@ -406,8 +429,6 @@ public class GameScreen implements Screen {
 		for(JsonValue l : list) {
 			globalList.add(json.readValue(User.class, l));
 		}
-		
-		sendHighScore();
 	}
 	
 	public void getUserDetails() {
@@ -458,12 +479,21 @@ public class GameScreen implements Screen {
 		emailField = new TextField("Email", new Skin(Gdx.files.internal("data/uiskin.json")));
 		emailField.setMaxLength(30);
 		
-		userDetailTable.row();
-		userDetailTable.add("-- HighScores Information --").colspan(2);
-		userDetailTable.row();
-		userDetailTable.add("Submit for bi-weekly prizes!").colspan(2);
-		userDetailTable.row();
-		userDetailTable.add("Click the twitter button for more info!").colspan(2).padBottom(20);
+		if(madeTop10 == false) {
+			userDetailTable.row();
+			userDetailTable.add("-- HighScores Information --").colspan(2);
+			userDetailTable.row();
+			userDetailTable.add("Submit for bi-weekly prizes!").colspan(2);
+			userDetailTable.row();
+			userDetailTable.add("Click the twitter button for more info!").colspan(2).padBottom(20);
+		} else {
+			userDetailTable.row();
+			userDetailTable.add("You made a top 10 highscore!").colspan(2);
+			userDetailTable.row();
+			userDetailTable.add("Please input details for prizes!").colspan(2);
+			userDetailTable.row();
+			userDetailTable.add("Note: Email is for contact only.").colspan(2).padBottom(20);
+		}
 		
 		userDetailTable.row();
 		userDetailTable.add(nameField).colspan(1).width(400);
@@ -475,7 +505,12 @@ public class GameScreen implements Screen {
 		style.font = new BitmapFont();        
 		
 		okButton = new Button(style);
-		Button noThanks = new Button(style);
+		
+		TextButtonStyle style1 = new TextButtonStyle();
+		style1.up = new TextureRegionDrawable(buttons[2]); 
+		style1.down = new TextureRegionDrawable(buttons[2]);
+		style1.font = new BitmapFont();    
+		noThanks = new Button(style1);
 		
 		userDetailTable.row();
 		userDetailTable.add(noThanks).colspan(1).padTop(30);
@@ -487,10 +522,10 @@ public class GameScreen implements Screen {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
 				Preferences prefs = Gdx.app.getPreferences("Blockjump");
-				name = nameField.getText();
-				email = emailField.getText();
-				prefs.putString("name", nameField.getText());
-				prefs.putString("email", emailField.getText());
+				name = nameField.getText().equals("Username") ? "No Name" : nameField.getText();
+				email = emailField.getText().equals("Email") ? "No Email" : emailField.getText();
+				prefs.putString("name", name);
+				prefs.putString("email", email);
 				prefs.flush();
 				GameState.state = GameState.PLAY_MENU;
 				Gdx.input.setInputProcessor(playMenuStage);
@@ -563,20 +598,26 @@ public class GameScreen implements Screen {
         }
         
         TextButtonStyle style = new TextButtonStyle();
-		style.up = new TextureRegionDrawable(buttons[3]); 
-		style.down = new TextureRegionDrawable(buttons[3]);
+		style.up = new TextureRegionDrawable(buttons[2]); 
+		style.down = new TextureRegionDrawable(buttons[2]);
 		style.font = new BitmapFont();
         
 		highScoreStage = new Stage();
 		highScoreStage.addActor(highScoreTable);
 		
         backButton = new Button(style);   
-        userDetailsButton = new Button(style);
+        
+        TextButtonStyle style1 = new TextButtonStyle();
+		style1.up = new TextureRegionDrawable(buttons[4]); 
+		style1.down = new TextureRegionDrawable(buttons[4]);
+		style1.font = new BitmapFont();
+        userDetailsButton = new Button(style1);
         
         highScoreTable.row();
-        highScoreTable.add(backButton).colspan(3).padTop(20);
-        highScoreTable.row();
-        highScoreTable.add(userDetailsButton).colspan(3).padTop(20);
+        highScoreTable.add(backButton).colspan(1).padTop(20);
+        highScoreTable.add().colspan(1).pad(20);
+        highScoreTable.add(userDetailsButton).colspan(1).padTop(20);
+
         
 		backButton.addListener(new ChangeListener() {
 			@Override
@@ -589,6 +630,7 @@ public class GameScreen implements Screen {
 		userDetailsButton.addListener(new ChangeListener() {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
+				createUserInput();
 				GameState.state = GameState.USER_DETAILS;
 				Gdx.input.setInputProcessor(userDetailStage);
 			}
@@ -603,8 +645,8 @@ public class GameScreen implements Screen {
 	    pauseMenuStage.addActor(pauseMenuTable);
 	    
 		TextButtonStyle style = new TextButtonStyle();
-		style.up = new TextureRegionDrawable(buttons[1]); //1080 x 300
-		style.down = new TextureRegionDrawable(buttons[1]);
+		style.up = new TextureRegionDrawable(buttons[0]); //1080 x 300
+		style.down = new TextureRegionDrawable(buttons[0]);
 		style.font = new BitmapFont();
 
 		resumeButton = new Button(style);
@@ -634,8 +676,8 @@ public class GameScreen implements Screen {
 		playMenuTable.add(playButton).padRight(100);
 		
 		TextButtonStyle styleHS = new TextButtonStyle();
-		styleHS.up = new TextureRegionDrawable(buttons[2]);
-		styleHS.down = new TextureRegionDrawable(buttons[2]);
+		styleHS.up = new TextureRegionDrawable(buttons[1]);
+		styleHS.down = new TextureRegionDrawable(buttons[1]);
 		styleHS.font = new BitmapFont();
 		
 		highScoreButton = new Button(styleHS);
@@ -664,7 +706,6 @@ public class GameScreen implements Screen {
 			    createHighScores();
 				GameState.state = GameState.HIGHSCORES;
 				Gdx.input.setInputProcessor(highScoreStage);
-				grabHighScores();
 			}
 		});
 	}	
