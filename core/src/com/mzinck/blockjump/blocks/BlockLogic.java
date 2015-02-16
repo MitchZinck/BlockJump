@@ -1,6 +1,7 @@
 package com.mzinck.blockjump.blocks;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 
 import com.badlogic.gdx.Gdx;
@@ -74,30 +75,32 @@ public class BlockLogic {
 				}
 			}
 			
-			for(int i = 0; i < blocksMoving.size(); i++) {
-				Rectangle zv = blocksMoving.get(i).getBlockRectangle();
-				if(bl.getBlockRectangle().overlaps(zv) && bl.getBlockRectangle() != zv) {
-					moving = false;
-					blocksMoving.remove(bl);
-					blocksStationary.add(bl);
-				}
-			}
+//			for(int i = 0; i < blocksMoving.size(); i++) {
+//				Rectangle zv = blocksMoving.get(i).getBlockRectangle();
+//				if(bl.getBlockRectangle().overlaps(zv) && bl.getBlockRectangle() != zv) {
+//					moving = false;
+//					blocksMoving.remove(bl);
+//					blocksStationary.add(bl);
+//				}
+//			}
 			
 			for(int i = 0; i < blocksStationary.size(); i++) {
 				Block zv = blocksStationary.get(i);
 				if(bl.getBlockRectangle().overlaps(zv.getBlockRectangle()) && bl != zv) {
 					moving = false;
+					bl.getBlockRectangle().setY(zv.getBlockRectangle().getY() + zv.getBlockRectangle().getHeight() + 1);
 					blocksMoving.remove(bl);
 					blocksStationary.add(bl);
 				}
 			}
 		}
 		
+		
 		Iterator<Block> iterator = blocksStationary.iterator(); 
 		while(iterator.hasNext()) {
 			Block block = iterator.next();
 			block.setBlockCurrent(block.getBlockSleep());
-			if(block.getBlockRectangle().getY() + 200 < lava.getHeight()) {
+			if(block.getBlockRectangle().getY() + 1000 < lava.getHeight()) {
 				blocksUnderLava.add(block);
 				iterator.remove();
 			}
@@ -105,13 +108,13 @@ public class BlockLogic {
 		
 		if(twice == false) {			
 			if(player.checkBoth()) {
-				updatePlayer();
+				updatePlayerCollision(twice);
 				update(true);
 			} else {
-				updatePlayer();
+				updatePlayerCollision(twice);
 			}
 		} else {
-			updatePlayer();
+			updatePlayerCollision(twice);
 		}
 	}
 	
@@ -119,15 +122,17 @@ public class BlockLogic {
 		if(block.getBlockRectangle().overlaps(playerRectangle)) {	
 			switch (pState) {
 				case "sides":
-					if(overLapsRightSide(block.getBlockRectangle(), playerRectangle) && !isOnBlock(block.getBlockRectangle(), playerRectangle) && !isUnderBlock(block.getBlockRectangle(), playerRectangle)) {
+					if(overLapsRightSide(block.getBlockRectangle(), playerRectangle) && !isOnBlock(block.getBlockRectangle(), playerRectangle)) {
 						args[PlayerState.OVERLAPS_RIGHT.getSlot()] = new OverlapArgs(PlayerState.OVERLAPS_RIGHT, blockIsFalling, block);
-					} else if(overLapsLeftSide(block.getBlockRectangle(), playerRectangle) && !isOnBlock(block.getBlockRectangle(), playerRectangle) && !isUnderBlock(block.getBlockRectangle(), playerRectangle)) {				
+					} else if(overLapsLeftSide(block.getBlockRectangle(), playerRectangle) && !isOnBlock(block.getBlockRectangle(), playerRectangle)) {				
 						args[PlayerState.OVERLAPS_LEFT.getSlot()] = new OverlapArgs(PlayerState.OVERLAPS_LEFT, blockIsFalling, block);
 					}
 					break;
 				case "top":
 					if(isOnBlock(block.getBlockRectangle(), playerRectangle)) {
-						args[PlayerState.OVERLAPS_TOP.getSlot()] = new OverlapArgs(PlayerState.OVERLAPS_TOP, blockIsFalling, block);				
+						if(args[PlayerState.OVERLAPS_TOP.getSlot()] == null) {
+							args[PlayerState.OVERLAPS_TOP.getSlot()] = new OverlapArgs(PlayerState.OVERLAPS_TOP, blockIsFalling, block);
+						}
 					}
 					break;
 				case "bottom":
@@ -144,29 +149,39 @@ public class BlockLogic {
 	}
 	
 	public void overLapCheck(String state) {
-		for(Block b : blocksStationary) { //make sure that bottom isnt fucking being registered as it touching another rectangle on the side fuck sakes ricky
-			if(state == "bottom") {
-				if((args[PlayerState.OVERLAPS_LEFT.getSlot()] != null && args[PlayerState.OVERLAPS_LEFT.getSlot()].getBlock() != b) &&
-					(args[PlayerState.OVERLAPS_RIGHT.getSlot()] != null && args[PlayerState.OVERLAPS_RIGHT.getSlot()].getBlock() != b)) {
-						overLapCheck(b, plr, false, state);
+		for(Block b : blocksStationary) { 
+			if(state.equals("bottom") || state.equals("top")) {
+				if((args[PlayerState.OVERLAPS_LEFT.getSlot()] != null)) {
+					if(args[PlayerState.OVERLAPS_LEFT.getSlot()].getBlock() == b) {
+						continue;
+					}
 				}
-			} else {
-				overLapCheck(b, plr, false, state);
+				if(args[PlayerState.OVERLAPS_RIGHT.getSlot()] != null) {
+					if(args[PlayerState.OVERLAPS_RIGHT.getSlot()].getBlock() == b) {
+						continue;
+					}
+				}
 			}
+			overLapCheck(b, plr, false, state);
 		}
-		for(Block b : blocksMoving) { //make sure that bottom isnt fucking being registered as it touching another rectangle on the side fuck sakes ricky
-			if(state == "bottom") {
-				if((args[PlayerState.OVERLAPS_LEFT.getSlot()] != null && args[PlayerState.OVERLAPS_LEFT.getSlot()].getBlock() != b) &&
-				   (args[PlayerState.OVERLAPS_RIGHT.getSlot()] != null && args[PlayerState.OVERLAPS_RIGHT.getSlot()].getBlock() != b)) {
-					overLapCheck(b, plr, true, state);
+		for(Block b : blocksMoving) {
+			if(state.equals("bottom") || state.equals("top")) {
+				if((args[PlayerState.OVERLAPS_LEFT.getSlot()] != null)) {
+					if(args[PlayerState.OVERLAPS_LEFT.getSlot()].getBlock() == b) {
+						continue;
+					}
 				}
-			} else {
-				overLapCheck(b, plr, true, state);
+				if(args[PlayerState.OVERLAPS_RIGHT.getSlot()] != null) {
+					if(args[PlayerState.OVERLAPS_RIGHT.getSlot()].getBlock() == b) {
+						continue;
+					}
+				}
 			}
+			overLapCheck(b, plr, true, state);
 		}
 	}
 
-	public void updatePlayer() {
+	public void updatePlayerCollision(boolean twice) {
 		overLapCheck("sides");
 		if(args[PlayerState.OVERLAPS_LEFT.getSlot()] != null) {
 			player.setMaxSpeedRight((int) 0);
@@ -189,6 +204,7 @@ public class BlockLogic {
 		overLapCheck("top");
 		if(args[PlayerState.OVERLAPS_TOP.getSlot()] != null) {
 			if(args[PlayerState.OVERLAPS_BOTTOM.getSlot()] == null) {
+				Gdx.app.log("asfasf", "asfasf");
 				GameScreen.cameraFallSpeed = 5;
 				fall = false;
 				if(args[PlayerState.OVERLAPS_TOP.getSlot()].isBlockIsFalling() == true) {
@@ -205,33 +221,34 @@ public class BlockLogic {
 				player.kill();
 			}
 		}
-		
+		Gdx.app.log("player = " + plr.getX(), "player = " + plr.getX());
 		player.setFalling(fall);
+		
 	    for(int i = 0; i < args.length; i++) {
 	    	args[i] = null;
 	    }		
 	}
 	
 	public boolean isUnderBlock(Rectangle block, Rectangle playerRectangle) {
-		return playerRectangle.y + player.getDimension() >= block.y && playerRectangle.y + player.getDimension() <= block.y + player.getJumpSpeed() + 1;
+		return ((playerRectangle.y + player.getDimension() >= block.y) && (playerRectangle.y + player.getDimension() <= block.y + player.getJumpSpeed() + 1));
 	}
 	
 	public boolean isOnBlock(Rectangle block, Rectangle playerRectangle) {
-		return block.y + block.height >= playerRectangle.y && block.y + (block.height - player.getFallSpeed()) <= playerRectangle.y; 
+		return ((block.y + block.height >= playerRectangle.y) && (block.y + (block.height - player.getFallSpeed()) <= playerRectangle.y)); 
 	}
 	
 	public boolean overLapsRightSide(Rectangle block, Rectangle playerRectangle) {
-		return block.x + block.width >= playerRectangle.x && block.x + (block.width - player.getMaxSpeedLeft()) <= playerRectangle.x;
+		return ((block.x + block.width >= playerRectangle.x) && (block.x + (block.width - player.getMaxSpeedLeft()) <= playerRectangle.x));
 	}
 	
 	public boolean overLapsLeftSide(Rectangle block, Rectangle playerRectangle) {
-		return block.x <= playerRectangle.x + player.getDimension() && block.x + player.getMaxSpeedRight() >= playerRectangle.x + player.getDimension() ;
+		return ((block.x <= playerRectangle.x + player.getDimension()) && (block.x + player.getMaxSpeedRight() >= playerRectangle.x + player.getDimension())) ;
 	}
 
 	public void spawnBlock() {
 		Rectangle rect = new Rectangle();
 		int rand = MathUtils.random(Constants.SCREEN_WIDTH - 153);
-		rect.x = rand;	
+		rect.x = rand;
 		if(lastSpawn != null) {
 			rect.y = lastSpawn.y + 170; 
 		} else {

@@ -22,6 +22,7 @@ public class AndroidLauncher extends AndroidApplication implements AndroidReques
 	private RelativeLayout.LayoutParams layoutParams;
 	private final int SHOW_ADS = 1;
     private final int HIDE_ADS = 0;
+    private AdRequest.Builder adRequestBuilder;
 	
 	@Override
 	protected void onCreate (Bundle savedInstanceState) {
@@ -36,7 +37,7 @@ public class AndroidLauncher extends AndroidApplication implements AndroidReques
 		View gameView = initializeForView(new BlockJump(this));
 		
 		AdView adMobView = createAdView();// Put in your secret key here this, AdSize.BANNER, "xxxxxxxx"
-		AdRequest.Builder adRequestBuilder = new AdRequest.Builder();
+		adRequestBuilder = new AdRequest.Builder();
 		//adRequestBuilder.addTestDevice("93F07773A581EBFA7B9832E76C04F75B");
 
 	    adMobView.loadAd(adRequestBuilder.build());	
@@ -70,9 +71,11 @@ public class AndroidLauncher extends AndroidApplication implements AndroidReques
         public void handleMessage(Message msg) {
             switch(msg.what) {
                 case SHOW_ADS:
+                	adView.loadAd(adRequestBuilder.build());
                     adView.setVisibility(View.VISIBLE);
                     break;
                 case HIDE_ADS:
+                    adView.destroy();
                     adView.setVisibility(View.GONE);
                     break;
             }

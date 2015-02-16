@@ -96,8 +96,8 @@ public class GameScreen implements Screen {
 		this.androidHandler = androidHandler;
 		this.androidHandler.hideAds();
 		
-		spriteSheet[0] = new TextureRegion(spriteSheetTexture, 0, 0, 0.333F, 0.62352941177F); //BlockAsleep
-		spriteSheet[1] = new TextureRegion(spriteSheetTexture, 0.333F, 0, 0.666F, 0.62352941177F); //BlockAwake
+		spriteSheet[0] = new TextureRegion(spriteSheetTexture, 0, 0, 100, 106); //BlockAsleep
+		spriteSheet[1] = new TextureRegion(spriteSheetTexture, 100, 0, 100, 106); //BlockAwake
 		
 		player = new Player(new TextureRegion(spriteSheetTexture, 0.42666666666F, 0.62352941177F, 0.63999999999F, 1F), 
 				 new TextureRegion(spriteSheetTexture, 0, 0.62352941177F, 0.2133333333333F, 1F), 
@@ -132,7 +132,6 @@ public class GameScreen implements Screen {
 	    createPlayMenu();
 	    createPauseButton();
 	    createPauseMenu();
-	    grabHighScores();
 	    
 	    Preferences prefs = Gdx.app.getPreferences("Blockjump");
 		if (!prefs.contains("name")) {
@@ -163,13 +162,13 @@ public class GameScreen implements Screen {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
  
 		// tell the camera to update its matrices.		
-		camera.update();				
-		renderGame();		
+		camera.update();
+		renderGame();	
+		renderShapes();
 		
 		switch(GameState.state) {
 		
-			case RUNNING:
-				renderShapes();		
+			case RUNNING:		
 				if(player.getY() > camera.position.y + (camera.viewportHeight * .10f)) {
 					camera.position.y += player.getJumpSpeed();
 					textHeight += player.getJumpSpeed();
@@ -183,6 +182,13 @@ public class GameScreen implements Screen {
 				}
 				
 				player.update();
+				if(64 + player.getX() > Constants.SCREEN_WIDTH) {
+					player.setCheckBoth(true);
+				} else if(player.getX() < 0) {
+					player.setCheckBoth(true);
+				} else {
+					player.setCheckBoth(false);
+				}
 				blockLogic.update(false);
 				lava.update(player);
 				
@@ -271,21 +277,22 @@ public class GameScreen implements Screen {
 	}
 	
 	public void renderBackground() {
-		if(player.getY() < 300) { 
+		int currentY = (int) (GameState.state == GameState.RUNNING ? player.getY() : camera.position.y);  
+		if(currentY < 300) { 
 			game.batch.draw(background, 0, 0);
 			game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, 400);
 			game.batch.draw(backgroundScroll, backgroundX, 400);
-		} else if(player.getY() > currentScroll - 1000) {
+		} else if(currentY > currentScroll - 1000) {
 			game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, currentScroll - 2000);
 			game.batch.draw(backgroundScroll, backgroundX, currentScroll - 2000);
 			
 			game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, currentScroll);
 			game.batch.draw(backgroundScroll, backgroundX, currentScroll);
-			if(nextScroll - 1000 < player.getY()) {
+			if(nextScroll - 1000 < currentY) {
 				game.batch.draw(backgroundScroll, backgroundX - Constants.SCREEN_WIDTH, nextScroll);
 				game.batch.draw(backgroundScroll, backgroundX, nextScroll);
 			}
-			if(player.getY() > nextScroll) {
+			if(currentY > nextScroll) {
 				currentScroll = nextScroll;
 				nextScroll = nextScroll + 2000;
 			}			
@@ -329,13 +336,9 @@ public class GameScreen implements Screen {
 		
 		game.batch.draw(player.getCurrentTexture(), player.getX(), player.getY());
 		if(64 + player.getX() > Constants.SCREEN_WIDTH) {
-			player.setCheckBoth(true);
 			game.batch.draw(player.getCurrentTexture(), player.getX() - Constants.SCREEN_WIDTH, player.getY());
 		} else if(player.getX() < 0) {
-			player.setCheckBoth(true);
 			game.batch.draw(player.getCurrentTexture(), player.getX() + Constants.SCREEN_WIDTH, player.getY());
-		} else {
-			player.setCheckBoth(false);
 		}
 		
 		if (debug == true) {
@@ -343,8 +346,8 @@ public class GameScreen implements Screen {
 										+ " FPS : " + Float.toString(Math.round(Gdx.input.getAccelerometerX() * 100) / 100)
 										+ "X Tilt\n X: " + player.getX() + "\n Y: "
 										+ player.getY() + " Highscore: " + Long.toString(player.getCurrentScore()) + "/" + Long.toString(player.getHighScore()), 0, textHeight);
-		} else {
-			game.font.draw(game.batch, Long.toString(player.getCurrentScore()), 0, textHeight);
+		} else if(GameState.state == GameState.RUNNING) {
+			game.font.draw(game.batch, Long.toString(player.getCurrentScore()), 0, textHeight);			
 		}
 		
 		if(GameState.state == GameState.DEAD) {
@@ -356,11 +359,14 @@ public class GameScreen implements Screen {
 	}
 	
 	public void renderShapes() {
+		Gdx.gl.glEnable(GL20.GL_BLEND);
+		Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 		shapeRenderer.setProjectionMatrix(camera.combined);
 		
 	    shapeRenderer.begin(ShapeType.Filled);
-	    shapeRenderer.setColor(255, 69, 0, 0);
-	    shapeRenderer.rect(0, lava.getHeight() - 800, Constants.SCREEN_WIDTH, 800);
+	    shapeRenderer.setColor(255, 69, 0, 0.5F);
+	    float height = GameState.state == GameState.RUNNING ? 800 : player.getY() + 500;
+	    shapeRenderer.rect(0, lava.getHeight() - height, Constants.SCREEN_WIDTH, height);
 	    
 	    shapeRenderer.end();
 	}
@@ -409,7 +415,7 @@ public class GameScreen implements Screen {
 				
 			}
 			socket.write(b);
-			Preferences prefs = Gdx.app.getPreferences("BlockJump");
+			Preferences prefs = Gdx.app.getPreferences("Blockjump");
 			prefs.putBoolean("highscore_submitted", true);
 			prefs.flush();
 		} catch (IOException e) {
@@ -547,7 +553,15 @@ public class GameScreen implements Screen {
 		});
 	}
 	
-	public void createHighScores() {
+	public void createHighScores() {        
+		highScoreStage = new Stage();		
+		highScoreTable = new Table();
+		highScoreStage.addActor(highScoreTable);
+		
+		if(globalList.isEmpty()) {
+			grabHighScores();
+		}
+		
 		Preferences prefs = Gdx.app.getPreferences("Blockjump");
 		if(prefs.getBoolean("highscore_submitted") == false) {
 			sendHighScore();
@@ -558,7 +572,6 @@ public class GameScreen implements Screen {
 		pm.setColor(Color.GRAY);
 		pm.fill();
 		
-		highScoreTable = new Table();
 		//highScoreTable.setBackground(new TextureRegionDrawable(new TextureRegion(new Texture(pm))));		
         highScoreTable.setSkin(new Skin(Gdx.files.internal("data/uiskin.json")));
         highScoreTable.setFillParent(true);
@@ -601,9 +614,6 @@ public class GameScreen implements Screen {
 		style.up = new TextureRegionDrawable(buttons[2]); 
 		style.down = new TextureRegionDrawable(buttons[2]);
 		style.font = new BitmapFont();
-        
-		highScoreStage = new Stage();
-		highScoreStage.addActor(highScoreTable);
 		
         backButton = new Button(style);   
         
@@ -686,17 +696,17 @@ public class GameScreen implements Screen {
 		playButton.addListener(new ChangeListener() {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
-				if(GameState.state == GameState.PLAY_MENU) {
+				if(GameState.state == GameState.PLAY_MENU && !player.isDead()) {
 					player.setJumping(false);
 					player.setPlayMenu(false);
 					player.setJump(0);
 					resume();
-				} else if(GameState.state == GameState.DEAD) {
+				} else {
 					dispose();
 					GameState.state = GameState.RUNNING;
 					Gdx.input.setInputProcessor(pauseStage);
 					game.setScreen(new GameScreen(game, androidHandler));
-				} 
+				}
 			}
 		});
 		
