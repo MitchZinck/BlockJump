@@ -4,15 +4,15 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.mzinck.blockjump.androidcontroller.AndroidRequestHandler;
+import com.mzinck.blockjump.mobilecontroller.AdRequestHandler;
  
 public class BlockJump extends Game {
  
 	SpriteBatch batch;
 	BitmapFont font;
-	AndroidRequestHandler arh;
+	AdRequestHandler arh;
 	
-	public BlockJump(AndroidRequestHandler arh) {
+	public BlockJump(AdRequestHandler arh) {
 		this.arh = arh;
 	}	
 

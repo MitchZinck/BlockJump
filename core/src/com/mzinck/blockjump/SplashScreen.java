@@ -4,19 +4,19 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.mzinck.blockjump.androidcontroller.AndroidRequestHandler;
+import com.mzinck.blockjump.mobilecontroller.AdRequestHandler;
  
 public class SplashScreen implements Screen {
  
 	private final BlockJump game; 
 	private OrthographicCamera camera;
 	private Texture logo;
-	private AndroidRequestHandler arh;
+	private AdRequestHandler arh;
  
-	public SplashScreen(final BlockJump game, AndroidRequestHandler arh) {
+	public SplashScreen(final BlockJump game, AdRequestHandler arh) {
 		this.game = game;		
 		this.arh = arh;
-		logo = new Texture(Gdx.files.internal("logo.png"));		
+		logo = new Texture(Gdx.files.internal("player.png"));		
 		camera = new OrthographicCamera();
 		camera.setToOrtho(false, Constants.SCREEN_HEIGHT, Constants.SCREEN_WIDTH); 
 	}

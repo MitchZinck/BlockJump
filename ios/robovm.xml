@@ -34,9 +34,24 @@
   </forceLinkClasses>
   <libs>
     <lib>build/libs/ios/libgdx-box2d.a</lib>
-    <lib>build/libs/ios/libgdx.a</lib>
     <lib>build/libs/ios/libObjectAL.a</lib>
+    <lib>build/libs/ios/libadmob.a</lib>
   </libs>
+  <libs>
+		<lib>build/libs/ios/libadmob.a</lib>
+	</libs>
+	<frameworks>
+		<framework>AudioToolbox</framework>
+		<framework>AVFoundation</framework>
+		<framework>CoreGraphics</framework>
+		<framework>CoreTelephony</framework>
+		<framework>MessageUI</framework>
+		<framework>SystemConfiguration</framework>
+	</frameworks>
+	<weakFrameworks>
+		<framework>AdSupport</framework>
+		<framework>StoreKit</framework>
+	</weakFrameworks>
   <frameworks>
     <framework>UIKit</framework>
     <framework>OpenGLES</framework>

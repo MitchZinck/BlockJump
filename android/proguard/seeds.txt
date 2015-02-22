@@ -1,0 +1,14 @@
+com.badlogic.gdx.backends.android.AndroidApplication: AndroidApplication()
+com.badlogic.gdx.backends.android.AndroidInput: AndroidInput(com.badlogic.gdx.Application,android.content.Context,java.lang.Object,com.badlogic.gdx.backends.android.AndroidApplicationConfiguration)
+com.badlogic.gdx.backends.android.AndroidInputThreePlus: AndroidInputThreePlus(com.badlogic.gdx.Application,android.content.Context,java.lang.Object,com.badlogic.gdx.backends.android.AndroidApplicationConfiguration)
+com.badlogic.gdx.physics.box2d.World: boolean contactFilter(long,long)
+com.badlogic.gdx.physics.box2d.World: void beginContact(long)
+com.badlogic.gdx.physics.box2d.World: void endContact(long)
+com.badlogic.gdx.physics.box2d.World: void preSolve(long,long)
+com.badlogic.gdx.physics.box2d.World: void postSolve(long,long)
+com.badlogic.gdx.physics.box2d.World: boolean reportFixture(long)
+com.badlogic.gdx.physics.box2d.World: float reportRayFixture(long,float,float,float,float,float)
+com.google.android.gms.ads.AdActivity
+com.google.android.gms.ads.AdActivity: AdActivity()
+com.mzinck.blockjump.android.AndroidLauncher
+com.mzinck.blockjump.android.AndroidLauncher: AndroidLauncher()

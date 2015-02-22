@@ -8,14 +8,16 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.RelativeLayout;
+
 import com.badlogic.gdx.backends.android.AndroidApplication;
+import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdSize;
 import com.google.android.gms.ads.AdView;
 import com.mzinck.blockjump.BlockJump;
-import com.mzinck.blockjump.androidcontroller.AndroidRequestHandler;
+import com.mzinck.blockjump.mobilecontroller.AdRequestHandler;
 
-public class AndroidLauncher extends AndroidApplication implements AndroidRequestHandler {
+public class AndroidLauncher extends AndroidApplication implements AdRequestHandler {
 	
 	private static final String AD_UNIT_ID = "ca-app-pub-1859904243523672/6072384277";
 	private AdView adView;
@@ -33,8 +35,12 @@ public class AndroidLauncher extends AndroidApplication implements AndroidReques
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN);
-       
-		View gameView = initializeForView(new BlockJump(this));
+//        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        
+        AndroidApplicationConfiguration a = new AndroidApplicationConfiguration();
+        a.useImmersiveMode = true;
+        
+		View gameView = initializeForView(new BlockJump(this), a);
 		
 		AdView adMobView = createAdView();// Put in your secret key here this, AdSize.BANNER, "xxxxxxxx"
 		adRequestBuilder = new AdRequest.Builder();
@@ -119,6 +125,12 @@ public class AndroidLauncher extends AndroidApplication implements AndroidReques
 	@Override
 	public void destroyAds() {
 		adView.destroy();
+	}
+
+	@Override
+	public void show() {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }

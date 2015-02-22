@@ -1,14 +1,17 @@
 package com.mzinck.blockjump;
  
-import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.text.ParseException;
 import java.util.ArrayList;
 
+import org.apache.commons.codec.binary.Base64;
+
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Net.HttpMethods;
 import com.badlogic.gdx.Net.HttpRequest;
 import com.badlogic.gdx.Net.HttpResponse;
@@ -21,8 +24,10 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Pixmap.Format;
+import com.badlogic.gdx.graphics.Texture.TextureFilter;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.BitmapFont.TextBounds;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
@@ -39,17 +44,20 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.TimeUtils;
-import com.mzinck.blockjump.androidcontroller.AndroidRequestHandler;
+import com.badlogic.gdx.utils.viewport.FillViewport;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mzinck.blockjump.blocks.Block;
 import com.mzinck.blockjump.blocks.BlockLogic;
 import com.mzinck.blockjump.lava.Lava;
+import com.mzinck.blockjump.mobilecontroller.AdRequestHandler;
 import com.mzinck.blockjump.objects.Player;
 import com.mzinck.blockjump.objects.User;
  
 public class GameScreen implements Screen {
 	
 	private final BlockJump game;
-	private AndroidRequestHandler androidHandler;
+	private AdRequestHandler androidHandler;
 	private Player player;
 	private Lava lava;
 	private BlockLogic blockLogic;
@@ -70,20 +78,23 @@ public class GameScreen implements Screen {
 	private boolean madeTop10 = false;
 	public static int cameraFallSpeed = 20;
 	
-	private Stage pauseStage, pauseMenuStage, playMenuStage, highScoreStage, userDetailStage;
-	private Table pauseTable, pauseMenuTable, playMenuTable, highScoreTable, userDetailTable;
-	private Button okButton, pauseButton, backButton, highScoreButton, playButton, userDetailsButton, resumeButton, noThanks;
+	private Stage pauseStage, pauseMenuStage, playMenuStage, highScoreStage, userDetailStage, twitterStage;
+	private Table pauseTable, pauseMenuTable, playMenuTable, highScoreTable, userDetailTable, twitterTable;
+	private Button okButton, pauseButton, backButton, highScoreButton, playButton, userDetailsButton, resumeButton, noThanks, twitterButton, rateButton;
 	private ShapeRenderer shapeRenderer = new ShapeRenderer();
 	
 	private ArrayList<User> globalList = new ArrayList<User>();
 	private SocketChannel socket;
 	
-    private TextureRegion[] buttons = new TextureRegion[5];
+    private TextureRegion[] buttons = new TextureRegion[6];
     private TextureRegion[] spriteSheet = new TextureRegion[6];
 	private TextureRegion sun = new TextureRegion(spriteSheetTexture, 0.666F, 0, 1F, 0.62352941177F);
 	
 	private String email, name;
 	private TextField emailField, nameField;
+	
+	private InputMultiplexer im;
+	private Viewport fit;
 	
 	/**
 	 * TODO - New Buttons, fix game glitches and smooth it out, add highscores
@@ -91,14 +102,14 @@ public class GameScreen implements Screen {
 	 * @throws ParseException 
 	 */ 
  
-	public GameScreen(final BlockJump game, AndroidRequestHandler androidHandler) {				
+	public GameScreen(final BlockJump game, AdRequestHandler androidHandler) {				
 		this.game = game;		
 		this.androidHandler = androidHandler;
 		this.androidHandler.hideAds();
 		
 		spriteSheet[0] = new TextureRegion(spriteSheetTexture, 0, 0, 100, 106); //BlockAsleep
 		spriteSheet[1] = new TextureRegion(spriteSheetTexture, 100, 0, 100, 106); //BlockAwake
-		
+
 		player = new Player(new TextureRegion(spriteSheetTexture, 0.42666666666F, 0.62352941177F, 0.63999999999F, 1F), 
 				 new TextureRegion(spriteSheetTexture, 0, 0.62352941177F, 0.2133333333333F, 1F), 
 				 new TextureRegion(spriteSheetTexture, 0.2133333333333F, 0.62352941177F, 0.42666666666F, 1F));
@@ -108,41 +119,57 @@ public class GameScreen implements Screen {
 			player.setPlayMenu(true);
 		}
 		
-		player.setBlocks(blockLogic); 
+		player.setBlocks(blockLogic);
 		
 		lava = new Lava();
 		
 		blockLogic = new BlockLogic(player, lava, spriteSheet);
 
 		camera = new OrthographicCamera();
-		camera.setToOrtho(false, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT); 
+		camera.setToOrtho(false, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT); 		
+		fit = new FitViewport(Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT, camera);
 		
 		if(debug == false) {
 			game.font = new BitmapFont(Gdx.files.internal("data/font.fnt"),
 			         Gdx.files.internal("data/font.png"), false);
-			game.font.setScale(1.5F);
+			game.font.setScale(1F);
 		}
 		
-		buttons[0] = new TextureRegion(buttonTexture, 0, 0, 0.20F, 1F); //Play
-		buttons[1] = new TextureRegion(buttonTexture, 0.20F, 0, 0.4F, 1F); //Highscore	    
-		buttons[2] = new TextureRegion(buttonTexture, 0.4F, 0, 0.6F, 1F); //back button
-		buttons[3] = new TextureRegion(buttonTexture, 0.6F, 0, 0.8F, 1F); // okbutton
-		buttons[4] = new TextureRegion(buttonTexture, 0.8F, 0, 1F, 1F); // detailsbutton
+		buttons[0] = new TextureRegion(buttonTexture, 0, 0, 0.166666666667F, 1F); //Play
+		buttons[1] = new TextureRegion(buttonTexture, 0.166666666667F, 0, 0.333333333334F, 1F); //Highscore	    
+		buttons[2] = new TextureRegion(buttonTexture, 0.333333333334F, 0, 0.500000000001F, 1F); //back button
+		buttons[3] = new TextureRegion(buttonTexture, 0.500000000001F, 0, 0.666666666668F, 1F); // okbutton
+		buttons[4] = new TextureRegion(buttonTexture, 0.666666666668F, 0, 0.833333333335F, 1F); // detailsbutton
+		buttons[5] = new TextureRegion(buttonTexture, 0.833333333335F, 0, 1F, 1F);  // twitter button
 				
 	    createPlayMenu();
 	    createPauseButton();
 	    createPauseMenu();
+	    createTwitterButton();
+	    
+		im = new InputMultiplexer();
 	    
 	    Preferences prefs = Gdx.app.getPreferences("Blockjump");
 		if (!prefs.contains("name")) {
-			GameState.state = GameState.USER_DETAILS;
 			player.setHighScore(0);
-			Gdx.input.setInputProcessor(userDetailStage);
+			im.addProcessor(playMenuStage);
+			im.addProcessor(twitterStage);
+			Gdx.input.setInputProcessor(im);
 			prefs.flush();
 		} else {
-			player.setHighScore(prefs.getLong("highscore"));
+			byte[] b = Base64.decodeBase64(prefs.getString("a8dsk4kdgashcas").getBytes());
+			String highscore = null;
+			try {
+				highscore = new String(b, "UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			player.setHighScore(Long.parseLong(highscore));
 			prefs.flush();
-		    Gdx.input.setInputProcessor(playMenuStage);
+			im.addProcessor(playMenuStage);
+			im.addProcessor(twitterStage);
+			Gdx.input.setInputProcessor(im);
 		    getUserDetails();
 		}
 	    
@@ -150,6 +177,12 @@ public class GameScreen implements Screen {
 	    
 	    backgroundX = Constants.SCREEN_WIDTH;
 	    lastTimeBg = TimeUtils.nanoTime();
+	    
+	    if(GameState.state == GameState.RUNNING) {
+	    	im.clear();
+	    	im.addProcessor(pauseStage);
+	    	Gdx.input.setInputProcessor(im);
+	    }
 	}
  
 	@Override
@@ -158,13 +191,33 @@ public class GameScreen implements Screen {
 		// arguments to glClearColor are the red, green
 		// blue and alpha component in the range [0,1]
 		// of the color to be used to clear the screen.
-		Gdx.gl.glClearColor(0, 0, 0.2f, 1);
+		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
  
 		// tell the camera to update its matrices.		
 		camera.update();
 		renderGame();	
 		renderShapes();
+		game.batch.setProjectionMatrix(camera.combined);		
+		game.batch.begin();			
+		
+		float fontWidth;
+		if(GameState.state == GameState.DEAD) {
+			fontWidth = game.font.getBounds("Endscore:" + Long.toString(player.getCurrentScore())).width;
+		    game.font.draw(game.batch, "Endscore:" + Long.toString(player.getCurrentScore()), camera.viewportWidth / 2F - fontWidth / 2F, (float) (camera.viewportHeight * 0.75));
+		    fontWidth = game.font.getBounds("Hiscore:" + Long.toString(player.getHighScore())).width;
+		    game.font.draw(game.batch, "Hiscore:" + Long.toString(player.getHighScore()), camera.viewportWidth / 2F - fontWidth / 2F, (float) (camera.viewportHeight * 0.70));
+		} else if(GameState.state == GameState.PLAY_MENU || GameState.state == GameState.DEAD) {
+			fontWidth = game.font.getBounds("Hiscore:" + Long.toString(player.getHighScore())).width;
+		    game.font.draw(game.batch, "Hiscore:" + Long.toString(player.getHighScore()), camera.viewportWidth / 2F - fontWidth / 2F, (float) (camera.viewportHeight * 0.70));
+		}
+		
+		game.batch.end();	
+		
+		if(GameState.state != GameState.RUNNING && GameState.state != GameState.USER_DETAILS) {
+			twitterStage.act(Gdx.graphics.getDeltaTime());
+		    twitterStage.draw();
+		}
 		
 		switch(GameState.state) {
 		
@@ -198,24 +251,17 @@ public class GameScreen implements Screen {
 				if(player.isDead()) {			
 					if(player.getCurrentScore() > player.getHighScore()) {
 						Preferences prefs = Gdx.app.getPreferences("Blockjump");
-						prefs.putLong("highscore", player.getCurrentScore());
+						byte[] base64 = null;
+						try {
+							base64 = Base64.encodeBase64(Long.toString(player.getCurrentScore()).getBytes("UTF-8"));
+						} catch (UnsupportedEncodingException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						prefs.putString("a8dsk4kdgashcas", new String(base64));
 						prefs.putBoolean("highscore_submitted", false);
 						prefs.flush();
 						player.setHighScore(player.getCurrentScore());
-						
-						if(!globalList.isEmpty()) {
-							User user = globalList.get(globalList.size() - 1);
-							if(user.getScore() < player.getHighScore()) {
-								prefs = Gdx.app.getPreferences("Blockjump");
-								if(prefs.contains("name")) {
-									prefs.flush();
-									sendHighScore();
-								} else {
-									madeTop10 = true;
-									prefs.flush();
-								}								
-							}
-						}
 					}
 					player.setCurrentTexture(player.getDeadTexture());
 					androidHandler.showAds();
@@ -224,8 +270,10 @@ public class GameScreen implements Screen {
 				break;
 				
 			case PLAY_MENU:
-				player.setJumping(true);
-				player.update();
+				if(!player.isDead()) {
+					player.setJumping(true);
+					player.update();
+				}
 			    playMenuStage.act(Gdx.graphics.getDeltaTime());
 			    playMenuStage.draw();
 				break;
@@ -239,11 +287,18 @@ public class GameScreen implements Screen {
 					if(madeTop10 == true) {
 						createUserInput();
 						GameState.state = GameState.USER_DETAILS;
-						Gdx.input.setInputProcessor(userDetailStage);
+						im.clear();
+						im.addProcessor(userDetailStage);
+						im.addProcessor(twitterStage);
+						Gdx.input.setInputProcessor(im);
 						madeTop10 = false;
 					} else {
 						GameState.state = GameState.DEAD;
-						Gdx.input.setInputProcessor(playMenuStage);
+						resize(Gdx.app.getGraphics().getWidth(), Gdx.app.getGraphics().getHeight());
+						im.clear();
+						im.addProcessor(playMenuStage);
+						im.addProcessor(twitterStage);
+						Gdx.input.setInputProcessor(im);
 					}
 				}
 				break;
@@ -350,11 +405,6 @@ public class GameScreen implements Screen {
 			game.font.draw(game.batch, Long.toString(player.getCurrentScore()), 0, textHeight);			
 		}
 		
-		if(GameState.state == GameState.DEAD) {
-		    game.font.draw(game.batch, "Endscore:" + Long.toString(player.getCurrentScore()), Constants.SCREEN_WIDTH / 8, 1000);
-		    game.font.draw(game.batch, "Hiscore:" + Long.toString(player.getHighScore()), Constants.SCREEN_WIDTH / 8, 900);
-		}
-		
 		game.batch.end();	
 	}
 	
@@ -364,7 +414,7 @@ public class GameScreen implements Screen {
 		shapeRenderer.setProjectionMatrix(camera.combined);
 		
 	    shapeRenderer.begin(ShapeType.Filled);
-	    shapeRenderer.setColor(255, 69, 0, 0.5F);
+	    shapeRenderer.setColor(255, 0, 0, 0.9F);
 	    float height = GameState.state == GameState.RUNNING ? 800 : player.getY() + 500;
 	    shapeRenderer.rect(0, lava.getHeight() - height, Constants.SCREEN_WIDTH, height);
 	    
@@ -376,6 +426,8 @@ public class GameScreen implements Screen {
 	 */
 	public void createPauseButton() {
 	    pauseStage = new Stage();
+	    //pauseStage.setViewport(fit);
+	    
 	    pauseTable = new Table();
 	    pauseTable.setFillParent(true);
 	    pauseStage.addActor(pauseTable);
@@ -394,10 +446,48 @@ public class GameScreen implements Screen {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
 				if(GameState.state == GameState.RUNNING) {
-					pause();		
+					pauseCall();		
 				} else {
-					resume();
+					resumeCall();
 				}
+			}
+		});
+	}
+	
+	public void createTwitterButton() {
+	    twitterStage = new Stage();
+	    twitterTable = new Table();
+	    twitterTable.setFillParent(true);
+	    twitterStage.addActor(twitterTable);
+
+		TextButtonStyle style = new TextButtonStyle();
+		style.up = new TextureRegionDrawable(buttons[3]);
+		style.down = new TextureRegionDrawable(buttons[3]);
+		style.font = new BitmapFont();
+		
+		TextButtonStyle style1 = new TextButtonStyle();
+		style1.up = new TextureRegionDrawable(buttons[5]);
+		style1.down = new TextureRegionDrawable(buttons[5]);
+		style1.font = new BitmapFont();
+
+		twitterButton = new Button(style1);
+		rateButton = new Button(style);
+		
+		twitterTable.add(rateButton).padRight(20);
+		twitterTable.add(twitterButton).padLeft(20);
+		twitterTable.bottom().padBottom(211);
+		
+		twitterButton.addListener(new ChangeListener() {
+			@Override
+			public void changed(ChangeEvent event, Actor actor) {
+				Gdx.net.openURI("https://twitter.com/BlockyJump");
+			}
+		});
+		
+		rateButton.addListener(new ChangeListener() {
+			@Override
+			public void changed(ChangeEvent event, Actor actor) {
+				Gdx.net.openURI("https://play.google.com/store/apps/details?id=com.mzinck.blockjump.android");
 			}
 		});
 	}
@@ -411,8 +501,11 @@ public class GameScreen implements Screen {
 			socket = SocketChannel.open();
 			socket.configureBlocking(false);
 			socket.connect(new InetSocketAddress("24.222.27.154", 49593));
+			long time = System.currentTimeMillis();
 			while(!socket.finishConnect()) {
-				
+				if(System.currentTimeMillis() - time > 300) {
+					return;
+				}
 			}
 			socket.write(b);
 			Preferences prefs = Gdx.app.getPreferences("Blockjump");
@@ -426,14 +519,41 @@ public class GameScreen implements Screen {
 	
 	public void grabHighScores() {
 		Json json = new Json();
-		String jsonString = getJsonList();
-		if(jsonString.equals("")) {
+		String jsonString = result;
+		
+		if(jsonString == null || jsonString.equals("")) {
 			return;
-		} 
+		}
+		
 		ArrayList<JsonValue> list = json.fromJson(ArrayList.class, jsonString);
-
+		globalList.clear();
 		for(JsonValue l : list) {
 			globalList.add(json.readValue(User.class, l));
+		}
+		
+		Preferences prefs = Gdx.app.getPreferences("Blockjump");	
+		if(prefs.getBoolean("highscore_submitted") == false) {
+			if(globalList.size() < 10) {
+				if(prefs.contains("name")) {
+					prefs.flush();
+					sendHighScore();
+				} else {
+					madeTop10 = true;
+					prefs.flush();
+				}	
+			} else {
+				User user = globalList.get(globalList.size() - 1);
+				if(user.getScore() < player.getHighScore()) {
+					prefs = Gdx.app.getPreferences("Blockjump");
+					if(prefs.contains("name")) {
+						prefs.flush();
+						sendHighScore();
+					} else {
+						madeTop10 = true;
+						prefs.flush();
+					}								
+				}
+			}
 		}
 	}
 	
@@ -444,45 +564,74 @@ public class GameScreen implements Screen {
 		prefs.flush();
 	}
 	
-	public String getJsonList() {
-		HttpRequest httpRequest = new HttpRequest(HttpMethods.POST);
-		httpRequest.setUrl("24.222.27.154/highscores.json");
+	public void getJsonList() {
+		HttpRequest httpRequest = new HttpRequest(HttpMethods.GET);
+		httpRequest.setUrl("http://24.222.27.154/highscores.json");
 		
 		Gdx.net.sendHttpRequest(httpRequest, new HttpResponseListener() {
 
 			@Override
 			public void handleHttpResponse(HttpResponse httpResponse) {
 				result = httpResponse.getResultAsString();
+				Gdx.app.postRunnable(new Runnable() {
+
+					@Override
+					public void run() {
+						grabHighScores();
+						createHighScores();
+					}
+					
+				});
 			}
 
 			@Override
 			public void failed(Throwable t) {
-				Dialog dialog = new Dialog("Error", new Skin(Gdx.files.internal("data/uiskin.json")));
-				dialog.text("You need a network\n connection to access\n or submit highscores!");
-				dialog.button("OK");
-				dialog.show(highScoreStage);
+				Gdx.app.postRunnable(new Runnable() {
+
+					@Override
+					public void run() {
+						createHighScores();
+						if(highScoreStage != null) {
+							Dialog dialog = new Dialog("Error", new Skin(Gdx.files.internal("data/uiskin.json")));
+							dialog.text("Connection Error");
+							dialog.button("OK");
+							dialog.show(highScoreStage);
+						}
+					}
+					
+				});
 				result = "";
 			}
 
 			@Override
 			public void cancelled() {
-				// TODO Auto-generated method stub
 				
 			}
 			
 		});
 		
-		return result;
+//		long time = System.currentTimeMillis();
+//		while(result == null) {
+//			if(System.currentTimeMillis() - time > 5000) {
+//				break;
+//			}
+//		}
+//		
+//		return result;
 	}
 	
 	public void createUserInput() {
 		userDetailStage = new Stage();
-		userDetailTable = new Table(new Skin(Gdx.files.internal("data/uiskin.json")));
+		userDetailStage.setViewport(fit);
+		
+		Skin skin = new Skin(Gdx.files.internal("data/uiskin.json"));
+		skin.getFont("default-font").setScale(0.6F);
+		userDetailTable = new Table(skin);
 		userDetailTable.setFillParent(true);
 		
-		nameField = new TextField("Username", new Skin(Gdx.files.internal("data/uiskin.json")));
-		nameField.setMaxLength(12);
-		emailField = new TextField("Email", new Skin(Gdx.files.internal("data/uiskin.json")));
+		nameField = new TextField("Username", skin);
+		nameField.setMaxLength(6);
+		emailField = new TextField("Email", skin);
 		emailField.setMaxLength(30);
 		
 		if(madeTop10 == false) {
@@ -502,8 +651,8 @@ public class GameScreen implements Screen {
 		}
 		
 		userDetailTable.row();
-		userDetailTable.add(nameField).colspan(1).width(400);
-		userDetailTable.add(emailField).colspan(1).width(400);		
+		userDetailTable.add(nameField).colspan(1).width(200);
+		userDetailTable.add(emailField).colspan(1).width(200);		
         
         TextButtonStyle style = new TextButtonStyle();
 		style.up = new TextureRegionDrawable(buttons[3]); 
@@ -534,7 +683,10 @@ public class GameScreen implements Screen {
 				prefs.putString("email", email);
 				prefs.flush();
 				GameState.state = GameState.PLAY_MENU;
-				Gdx.input.setInputProcessor(playMenuStage);
+				im.clear();
+				im.addProcessor(playMenuStage);
+				im.addProcessor(twitterStage);
+				Gdx.input.setInputProcessor(im);
 			}
 		});
 		
@@ -542,40 +694,46 @@ public class GameScreen implements Screen {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
 				Preferences prefs = Gdx.app.getPreferences("Blockjump");
-				email = "No Email";
-				name = "No Name";
-				prefs.putString("name", "No Name");
-				prefs.putString("email", "No Email");
-				prefs.flush();
+				if(!prefs.contains("name")) {
+					email = "No Email";
+					name = "No Name";
+					prefs.putString("name", "No Name");
+					prefs.putString("email", "No Email");
+					prefs.flush();
+				}
 				GameState.state = GameState.PLAY_MENU;
-				Gdx.input.setInputProcessor(playMenuStage);
+				im.clear();
+				im.addProcessor(playMenuStage);
+				im.addProcessor(twitterStage);
+				Gdx.input.setInputProcessor(im);
 			}
 		});
 	}
 	
-	public void createHighScores() {        
-		highScoreStage = new Stage();		
-		highScoreTable = new Table();
-		highScoreStage.addActor(highScoreTable);
-		
+	public void createHighScores() {     		
 		if(globalList.isEmpty()) {
 			grabHighScores();
 		}
 		
-		Preferences prefs = Gdx.app.getPreferences("Blockjump");
-		if(prefs.getBoolean("highscore_submitted") == false) {
-			sendHighScore();
+		if(name != null) {
+			Preferences prefs = Gdx.app.getPreferences("Blockjump");
+			if(prefs.getBoolean("highscore_submitted") == false) {
+				sendHighScore();
+			}
+			prefs.flush();
 		}
-		prefs.flush();
 		
-		Pixmap pm = new Pixmap(1,1, Format.RGB565);
-		pm.setColor(Color.GRAY);
-		pm.fill();
+		highScoreTable = new Table();
+//			
+//		Pixmap pm = new Pixmap(1,1, Format.RGB565);
+//		pm.setColor(Color.GRAY);
+//		pm.fill();
 		
-		//highScoreTable.setBackground(new TextureRegionDrawable(new TextureRegion(new Texture(pm))));		
-        highScoreTable.setSkin(new Skin(Gdx.files.internal("data/uiskin.json")));
+		//highScoreTable.setBackground(new TextureRegionDrawable(new TextureRegion(new Texture(pm))));	
+		Skin skin = new Skin(Gdx.files.internal("data/uiskin.json"));
+		skin.getFont("default-font").setScale(0.6F);
+        highScoreTable.setSkin(skin);
         highScoreTable.setFillParent(true);
-        
         highScoreTable.add(name).colspan(3);
         highScoreTable.row();
         highScoreTable.add(email).colspan(3);
@@ -595,9 +753,7 @@ public class GameScreen implements Screen {
         
         if(globalList.isEmpty()) {
         	highScoreTable.row();
-        	highScoreTable.add("Turn on");
-        	highScoreTable.add("your");
-        	highScoreTable.add("connection!");
+        	highScoreTable.add("Loading...").colspan(3);
         } else {
         
 	        int counter = 0;
@@ -609,7 +765,7 @@ public class GameScreen implements Screen {
 	        	highScoreTable.add(Long.toString(user.getScore()));
 	        }
         }
-        
+
         TextButtonStyle style = new TextButtonStyle();
 		style.up = new TextureRegionDrawable(buttons[2]); 
 		style.down = new TextureRegionDrawable(buttons[2]);
@@ -627,13 +783,25 @@ public class GameScreen implements Screen {
         highScoreTable.add(backButton).colspan(1).padTop(20);
         highScoreTable.add().colspan(1).pad(20);
         highScoreTable.add(userDetailsButton).colspan(1).padTop(20);
-
+		
+		highScoreStage = new Stage();
+		highScoreStage.setViewport(fit);
+		highScoreStage.addActor(highScoreTable);
         
+		im.clear();
+		im.addProcessor(highScoreStage);
+		im.addProcessor(twitterStage);
+		Gdx.input.setInputProcessor(im);
+		GameState.state = GameState.HIGHSCORES;
+		
 		backButton.addListener(new ChangeListener() {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
 				GameState.state = GameState.PLAY_MENU;
-				Gdx.input.setInputProcessor(playMenuStage);
+				im.clear();
+				im.addProcessor(playMenuStage);
+				im.addProcessor(twitterStage);
+				Gdx.input.setInputProcessor(im);
 			}
 		});		
 
@@ -642,13 +810,17 @@ public class GameScreen implements Screen {
 			public void changed(ChangeEvent event, Actor actor) {
 				createUserInput();
 				GameState.state = GameState.USER_DETAILS;
-				Gdx.input.setInputProcessor(userDetailStage);
+				im.clear();
+				im.addProcessor(userDetailStage);
+				im.addProcessor(twitterStage);
+				Gdx.input.setInputProcessor(im);
 			}
 		});
 	}
 	
 	public void createPauseMenu() {
 		pauseMenuStage = new Stage();
+		//pauseMenuStage.setViewport(fit);
 
 	    pauseMenuTable = new Table();
 	    pauseMenuTable.setFillParent(true);
@@ -665,13 +837,14 @@ public class GameScreen implements Screen {
 		resumeButton.addListener(new ChangeListener() {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
-				resume();
+				resumeCall();
 			}
 		});
 	}
 	
 	public void createPlayMenu() {
 		playMenuStage = new Stage();
+		playMenuStage.setViewport(fit);
 
 		playMenuTable = new Table();
 		playMenuTable.setFillParent(true);
@@ -700,11 +873,10 @@ public class GameScreen implements Screen {
 					player.setJumping(false);
 					player.setPlayMenu(false);
 					player.setJump(0);
-					resume();
+					resumeCall();
 				} else {
 					dispose();
 					GameState.state = GameState.RUNNING;
-					Gdx.input.setInputProcessor(pauseStage);
 					game.setScreen(new GameScreen(game, androidHandler));
 				}
 			}
@@ -712,16 +884,43 @@ public class GameScreen implements Screen {
 		
 		highScoreButton.addListener(new ChangeListener() {
 			@Override
-			public void changed(ChangeEvent event, Actor actor) {
-			    createHighScores();
-				GameState.state = GameState.HIGHSCORES;
-				Gdx.input.setInputProcessor(highScoreStage);
+			public void changed(ChangeEvent event, Actor actor) {				
+			    getJsonList();
 			}
 		});
 	}	
  
 	@Override
 	public void resize(int width, int height) {
+
+		switch(GameState.state) {
+//		
+//			case RUNNING:
+//				playMenuStage.getViewport().update(width, height, true);
+//				break;
+//				
+//			case PAUSED:	
+//				pauseMenuStage.getViewport().update(width, height, true);
+//				break;
+				
+			case HIGHSCORES:
+				highScoreStage.getViewport().update(width, height, true);
+				break;
+				
+			case USER_DETAILS:
+				userDetailStage.getViewport().update(width, height, true);
+				break;
+				
+			case PLAY_MENU:
+				playMenuStage.getViewport().update(width, height, true);
+				break;
+				
+			case DEAD:
+				playMenuStage.getViewport().update(width, height, true);
+				break;
+				
+		}
+		
 	}
  
 	@Override
@@ -734,20 +933,41 @@ public class GameScreen implements Screen {
 	@Override
 	public void hide() {
 	}
+	
+	public void pauseCall() {
+		androidHandler.showAds();
+		GameState.state = GameState.PAUSED;
+		im.clear();
+		im.addProcessor(pauseMenuStage);
+		im.addProcessor(twitterStage);
+		Gdx.input.setInputProcessor(im);
+	}
  
 	@Override
 	public void pause() {
-		androidHandler.showAds();
-		GameState.state = GameState.PAUSED;
-	    Gdx.input.setInputProcessor(pauseMenuStage);
+		if(GameState.state == GameState.RUNNING) {
+			androidHandler.showAds();
+			GameState.state = GameState.PAUSED;
+			im.clear();
+			im.addProcessor(pauseMenuStage);
+			im.addProcessor(twitterStage);
+			Gdx.input.setInputProcessor(im);
+		}
+	}
+	
+	public void resumeCall() {
+		player.setPlayMenu(false);
+		androidHandler.hideAds();
+		GameState.state = GameState.RUNNING;
+		im.clear();
+		im.addProcessor(pauseStage);
+		im.addProcessor(twitterStage);
+		Gdx.input.setInputProcessor(im);
 	}
  
 	@Override
 	public void resume() {
-		player.setPlayMenu(false);
-		androidHandler.hideAds();
-		GameState.state = GameState.RUNNING;
-	    Gdx.input.setInputProcessor(pauseStage);
+
 	}
  
 	@Override

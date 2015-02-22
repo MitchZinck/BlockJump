@@ -204,7 +204,6 @@ public class BlockLogic {
 		overLapCheck("top");
 		if(args[PlayerState.OVERLAPS_TOP.getSlot()] != null) {
 			if(args[PlayerState.OVERLAPS_BOTTOM.getSlot()] == null) {
-				Gdx.app.log("asfasf", "asfasf");
 				GameScreen.cameraFallSpeed = 5;
 				fall = false;
 				if(args[PlayerState.OVERLAPS_TOP.getSlot()].isBlockIsFalling() == true) {
@@ -221,7 +220,7 @@ public class BlockLogic {
 				player.kill();
 			}
 		}
-		Gdx.app.log("player = " + plr.getX(), "player = " + plr.getX());
+
 		player.setFalling(fall);
 		
 	    for(int i = 0; i < args.length; i++) {
@@ -230,11 +229,11 @@ public class BlockLogic {
 	}
 	
 	public boolean isUnderBlock(Rectangle block, Rectangle playerRectangle) {
-		return ((playerRectangle.y + player.getDimension() >= block.y) && (playerRectangle.y + player.getDimension() <= block.y + player.getJumpSpeed() + 1));
+		return ((playerRectangle.y + player.getDimension() >= block.y) && (playerRectangle.y + player.getDimension() <= block.y + player.getJumpSpeed() + 5));
 	}
 	
 	public boolean isOnBlock(Rectangle block, Rectangle playerRectangle) {
-		return ((block.y + block.height >= playerRectangle.y) && (block.y + (block.height - player.getFallSpeed()) <= playerRectangle.y)); 
+		return ((block.y + block.height >= playerRectangle.y) && (block.y + (block.height - player.getFallSpeed() - 2) <= playerRectangle.y)); 
 	}
 	
 	public boolean overLapsRightSide(Rectangle block, Rectangle playerRectangle) {

@@ -73,6 +73,7 @@ project(":ios") {
     configurations { natives }
 
     dependencies {
+    	compile fileTree(dir: 'build/ios/libs', include: '*.jar')
         compile project(":core")
         compile "org.robovm:robovm-rt:${roboVMVersion}"
         compile "org.robovm:robovm-cocoatouch:${roboVMVersion}"
