@@ -3,6 +3,8 @@ BlockJump
 
 Android Block Jumping Game
 
+Ignore the indentation issues, github messed them up
+
 Still in progress:
 
 Code documentation
